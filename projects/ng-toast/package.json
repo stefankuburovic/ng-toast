@@ -1,0 +1,36 @@
+{
+  "name": "@stefankuburovic/ng-toast",
+  "version": "1.0.0",
+  "description": "Small toast notifications for Angular: signals, zoneless, no dependencies beyond @angular/core and rxjs.",
+  "keywords": [
+    "angular",
+    "toast",
+    "toastr",
+    "notification",
+    "zoneless",
+    "signals"
+  ],
+  "license": "MIT",
+  "author": "Stefan Kuburovic",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stefankuburovic/ng-toast.git"
+  },
+  "homepage": "https://github.com/stefankuburovic/ng-toast#readme",
+  "bugs": {
+    "url": "https://github.com/stefankuburovic/ng-toast/issues"
+  },
+  "peerDependencies": {
+    "@angular/core": ">=20.2.0",
+    "rxjs": "^7.4.0"
+  },
+  "exports": {
+    "./toast.css": {
+      "style": "./toast.css",
+      "default": "./toast.css"
+    }
+  },
+  "sideEffects": [
+    "*.css"
+  ]
+}
