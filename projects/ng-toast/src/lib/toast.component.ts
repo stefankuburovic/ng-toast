@@ -250,7 +250,12 @@ export class ToastComponent implements OnDestroy {
         return;
       }
       this.swiping.set(true);
-      (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+      try {
+        // Keeps the moves coming when the finger leaves the toast; a nicety, not a need.
+        (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+      } catch {
+        // The browser no longer counts that pointer as active: swipe on without the capture.
+      }
       this.pause();
     }
     this.swipe.set(distance);
