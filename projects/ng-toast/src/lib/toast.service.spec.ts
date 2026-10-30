@@ -572,9 +572,13 @@ describe('ToastService', () => {
     toast.onHidden.subscribe(hidden);
     render();
 
+    const warn = vi.spyOn(console, 'warn');
+
     TestBed.resetTestingModule();
 
     expect(hidden).toHaveBeenCalledTimes(1);
     expect(document.querySelector('.overlay-container')).toBeNull();
+    expect(warn, 'no NG0406 for a destroyed ApplicationRef').not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });

@@ -368,7 +368,9 @@ export class ToastService {
   private drop(toast: OpenToast): void {
     this.toasts.delete(toast.active.toastId);
     const { componentRef } = toast.active;
-    this.appRef.detachView(componentRef.hostView);
+    // Destroying the view detaches it from the application as well. Detaching it here by hand
+    // would warn (NG0406) when the app is being destroyed: ApplicationRef goes first, before the
+    // service's onDestroy runs.
     componentRef.destroy();
     componentRef.location.nativeElement.remove();
     toast.toastPackage.tapped.complete();
