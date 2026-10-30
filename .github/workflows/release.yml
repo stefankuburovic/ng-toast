@@ -1,0 +1,37 @@
+# Publishes to npm when a GitHub release is published, with tag v<version>.
+#
+# No npm token: npm trusts this workflow (trusted publishing, set up once on npmjs.com under the
+# package's settings), and the package gets a provenance statement linking it to this build.
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - run: npm ci
+      - name: The tag names the version being published
+        run: |
+          version=$(node -p "require('./projects/ng-toast/package.json').version")
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Release tag $GITHUB_REF_NAME does not match package version v$version"
+            exit 1
+          fi
+      - run: npm test
+      - run: npm run build
+      - run: npm run size
+      - run: npm publish --access public --provenance
+        working-directory: dist/ng-toast
