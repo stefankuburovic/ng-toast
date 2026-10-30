@@ -158,6 +158,80 @@ button.toast-close-button {
 .toast-warning {
   background-color: #F89406;
 }
+.toast-loading {
+  background-color: #2F96B4;
+}
+
+/* loading: a spinner where the other types have their icon */
+.toast-container .toast-loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 17px;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: ng-toast-spin 0.8s linear infinite;
+}
+
+@keyframes ng-toast-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* action buttons */
+.toast-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.toast-action {
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+}
+.toast-action:hover,
+.toast-action:focus-visible {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* progress bar; ToastComponent sets its animation-duration to the timer's run */
+.toast-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 4px;
+  background-color: #000000;
+  opacity: 0.4;
+  transform-origin: left;
+  animation: ng-toast-progress linear forwards;
+}
+.toast-progress-increasing {
+  animation-direction: reverse;
+}
+.toast-paused .toast-progress {
+  animation-play-state: paused;
+}
+
+@keyframes ng-toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
 
 /* fade, timed by the toast's easeTime (ToastComponent sets --toast-ease-time) */
 .toast-container .toast-in {
