@@ -111,6 +111,9 @@ button.toast-close-button {
   border-radius: var(--ng-toast-radius, 3px);
   box-shadow: var(--ng-toast-shadow, 0 0 12px #999999);
   font: var(--ng-toast-font, inherit);
+  /* a sideways finger is a swipe (ToastComponent sets translate), an upright one still scrolls */
+  touch-action: pan-y;
+  transition: translate 200ms ease;
 }
 .toast-container .ng-toast:hover {
   box-shadow: var(--ng-toast-shadow-hover, 0 0 12px #000000);
@@ -302,7 +305,8 @@ button.toast-close-button {
   transform-origin: 50% 100%;
   /* spread: below the ones in front of it */
   transform: translateY(calc(var(--toast-offset, 0px) + var(--toast-index, 0) * var(--ng-toast-gap, 6px)));
-  transition: transform var(--ng-toast-stack-time, 300ms) ease, opacity var(--ng-toast-stack-time, 300ms) ease;
+  transition: transform var(--ng-toast-stack-time, 300ms) ease, opacity var(--ng-toast-stack-time, 300ms) ease,
+    translate 200ms ease;
 }
 /* collapsed: bottom edges lined up with the front one's, then a little lower and smaller per step */
 .toast-container.toast-stacked:not(:hover):not(:focus-within) > .ng-toast {
@@ -348,6 +352,25 @@ button.toast-close-button {
 @media (prefers-reduced-motion: reduce) {
   .toast-container.toast-stacked > .ng-toast {
     transition: none;
+  }
+}
+
+/* swiping: the toast follows the finger with no lag; let go, it flies out or snaps back */
+.toast-container .ng-toast.toast-swiping {
+  transition: none;
+  cursor: grabbing;
+}
+
+/*
+ * reduced motion: nothing slides, flies or snaps; the fades stay, being no motion, and the spinner
+ * turns slower
+ */
+@media (prefers-reduced-motion: reduce) {
+  .toast-container .ng-toast {
+    transition: none;
+  }
+  .toast-container .toast-loading::before {
+    animation-duration: 2.4s;
   }
 }
 

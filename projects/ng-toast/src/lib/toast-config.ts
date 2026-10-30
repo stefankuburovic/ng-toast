@@ -48,6 +48,8 @@ export interface ToastConfig {
   actions: readonly ToastAction[];
   /** A click anywhere on the toast closes it. The click is reported on `onTap` either way. */
   tapToDismiss: boolean;
+  /** A finger (or pen) swiping the toast sideways closes it. A mouse does not swipe. */
+  swipeToDismiss: boolean;
   /**
    * Renders the message as HTML. It goes through `[innerHTML]`, so Angular's sanitizer strips
    * scripts and `style` attributes; a message that needs its inline styles needs its own
@@ -127,6 +129,7 @@ export const DEFAULT_TOAST_CONFIG: ToastGlobalConfig = {
   progressAnimation: 'decreasing',
   actions: [],
   tapToDismiss: true,
+  swipeToDismiss: true,
   enableHtml: false,
   newestOnTop: true,
   positionClass: 'toast-top-right',
@@ -156,4 +159,15 @@ export const TOAST_CONFIG = new InjectionToken<Partial<ToastGlobalConfig>>('TOAS
  */
 export function provideToast(config: Partial<ToastGlobalConfig> = {}): EnvironmentProviders {
   return makeEnvironmentProviders([{ provide: TOAST_CONFIG, useValue: config }]);
+}
+
+/**
+ * {@link provideToast} for tests: no fade (`easeTime: 0`), so a toast that closes is gone at once,
+ * without waiting out a timer. Takes the same options.
+ *
+ * @example
+ * TestBed.configureTestingModule({ providers: [provideToastTesting()] });
+ */
+export function provideToastTesting(config: Partial<ToastGlobalConfig> = {}): EnvironmentProviders {
+  return provideToast({ easeTime: 0, ...config });
 }

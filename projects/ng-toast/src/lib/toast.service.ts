@@ -7,7 +7,8 @@ import {
   Injector,
   Signal,
   createComponent,
-  inject
+  inject,
+  signal
 } from '@angular/core';
 import { Observable, ReplaySubject, Subject } from 'rxjs';
 
@@ -117,7 +118,14 @@ export class ToastService {
   private readonly document = inject(DOCUMENT);
 
   /** Open and waiting toasts by id, in the order they were opened. */
-  private readonly toasts = new Map<number, OpenToast>();
+  private readonly byId = new Map<number, OpenToast>();
+  /** Backs {@link toasts}. */
+  private readonly list = signal<readonly ActiveToast[]>([]);
+  /**
+   * Every toast that is open or waiting for room, oldest first: for a count on a bell icon, or a
+   * list of your own.
+   */
+  readonly toasts: Signal<readonly ActiveToast[]> = this.list.asReadonly();
   /** One container per `positionClass`. */
   private readonly panes = new Map<string, HTMLElement>();
   /** Holds the containers; created with the first toast. */
@@ -145,7 +153,7 @@ export class ToastService {
   constructor() {
     inject(DestroyRef).onDestroy(() => {
       this.resizes?.disconnect();
-      [...this.toasts.values()].forEach(toast => this.drop(toast));
+      [...this.byId.values()].forEach(toast => this.drop(toast));
       this.overlay?.remove();
     });
   }
@@ -226,7 +234,8 @@ export class ToastService {
       onHidden: hidden.asObservable(),
       update: changes => this.update(toastId, changes)
     };
-    this.toasts.set(toastId, { active, shown, hidden, toastPackage, queued: true });
+    this.byId.set(toastId, { active, shown, hidden, toastPackage, queued: true });
+    this.listChanged();
 
     const { maxOpened, autoDismiss } = this.config;
     if (maxOpened && autoDismiss) {
@@ -288,7 +297,7 @@ export class ToastService {
    * @returns `false` when no such toast is open (already gone, or never was).
    */
   remove(toastId: number): boolean {
-    const toast = this.toasts.get(toastId);
+    const toast = this.byId.get(toastId);
     if (!toast) {
       return false;
     }
@@ -302,7 +311,7 @@ export class ToastService {
    * at once, without coming up.
    */
   clear(toastId?: number): void {
-    const toasts = [...this.toasts.values()].filter(
+    const toasts = [...this.byId.values()].filter(
       toast => toastId === undefined || toast.active.toastId === toastId
     );
     // The waiting ones first: closing the open ones makes room they would otherwise take.
@@ -315,7 +324,7 @@ export class ToastService {
 
   /** Applies an `ActiveToast.update`. */
   private update(toastId: number, changes: ToastUpdate): void {
-    const toast = this.toasts.get(toastId);
+    const toast = this.byId.get(toastId);
     if (!toast) {
       return;
     }
@@ -338,7 +347,7 @@ export class ToastService {
 
   /** An open or waiting toast that is not closing and shows the same, if there is one. */
   private duplicateOf(type: string, title: string, message: string): OpenToast | undefined {
-    return [...this.toasts.values()].find(
+    return [...this.byId.values()].find(
       ({ toastPackage, active }) =>
         toastPackage.toastType() === type &&
         toastPackage.title() === title &&
@@ -349,7 +358,7 @@ export class ToastService {
 
   /** The toasts on screen that are not closing, oldest first. */
   private onScreen(): OpenToast[] {
-    return [...this.toasts.values()].filter(
+    return [...this.byId.values()].filter(
       toast => !toast.queued && !toast.active.componentRef.instance.closing()
     );
   }
@@ -358,7 +367,7 @@ export class ToastService {
   private flush(): void {
     const { maxOpened } = this.config;
     let room = maxOpened ? maxOpened - this.onScreen().length : Infinity;
-    for (const toast of this.toasts.values()) {
+    for (const toast of this.byId.values()) {
       if (room <= 0) {
         break;
       }
@@ -392,7 +401,8 @@ export class ToastService {
 
   /** Takes a toast out at once and fires its `onHidden`, without letting waiting ones up. */
   private drop(toast: OpenToast): void {
-    this.toasts.delete(toast.active.toastId);
+    this.byId.delete(toast.active.toastId);
+    this.listChanged();
     const { componentRef } = toast.active;
     const element: HTMLElement = componentRef.location.nativeElement;
     const pane = element.parentElement;
@@ -410,6 +420,11 @@ export class ToastService {
     toast.shown.complete();
     toast.hidden.next();
     toast.hidden.complete();
+  }
+
+  /** Hands {@link toasts} the toasts there are now. */
+  private listChanged(): void {
+    this.list.set([...this.byId.values()].map(toast => toast.active));
   }
 
   /** The container for a position class, created on first use. */
@@ -433,7 +448,7 @@ export class ToastService {
 
   /** The toasts on screen in a container, newest first: the order of a stack, front to back. */
   private stackOf(pane: HTMLElement): OpenToast[] {
-    return [...this.toasts.values()]
+    return [...this.byId.values()]
       .filter(
         toast => !toast.queued && toast.active.componentRef.location.nativeElement.parentElement === pane
       )

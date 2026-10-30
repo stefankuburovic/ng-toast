@@ -2,7 +2,7 @@ import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 
-import { provideToast } from './toast-config';
+import { provideToast, provideToastTesting } from './toast-config';
 import { ToastComponent } from './toast.component';
 import { ToastService } from './toast.service';
 
@@ -603,6 +603,109 @@ describe('ToastService', () => {
       expect(pane().classList).not.toContain('toast-stacked');
       expect(index(shown()[0])).toBe('');
     });
+  });
+
+  describe('keyboard and touch', () => {
+    /** A pointer event as jsdom has it; a finger unless said otherwise. */
+    const pointer = (type: string, clientX: number, pointerType = 'touch'): Event =>
+      Object.assign(new MouseEvent(type, { clientX, bubbles: true }), { pointerId: 1, pointerType });
+
+    /** Gives the toast a width, which jsdom does not lay out. */
+    const wide = (toast: HTMLElement): HTMLElement =>
+      Object.defineProperty(toast, 'offsetWidth', { value: 300 });
+
+    it('closes on Esc while the focus is in the toast', () => {
+      setup();
+      toasts.success('x', '', { closeButton: true, disableTimeOut: true });
+      render();
+
+      shown()[0]
+        .querySelector('.toast-close-button')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      vi.advanceTimersByTime(300);
+      expect(shown()).toEqual([]);
+    });
+
+    it('goes when a finger swipes it far enough, and is no tap', () => {
+      setup();
+      const toast = toasts.success('x', '', { disableTimeOut: true, tapToDismiss: false });
+      const tapped = vi.fn();
+      toast.onTap.subscribe(tapped);
+      render();
+      const element = wide(shown()[0]);
+
+      element.dispatchEvent(pointer('pointerdown', 100));
+      element.dispatchEvent(pointer('pointermove', 150));
+      render();
+      expect(element.classList).toContain('toast-swiping');
+      expect(element.style.translate).toMatch(/^50px/);
+
+      element.dispatchEvent(pointer('pointermove', 200));
+      element.dispatchEvent(pointer('pointerup', 200));
+      element.click();
+      vi.advanceTimersByTime(300);
+      expect(tapped).not.toHaveBeenCalled();
+      expect(shown()).toEqual([]);
+    });
+
+    it('snaps back from a short swipe and holds the timer while the finger is on it', () => {
+      setup();
+      toasts.success('x');
+      render();
+      const element = wide(shown()[0]);
+
+      element.dispatchEvent(pointer('pointerdown', 100));
+      element.dispatchEvent(pointer('pointermove', 140));
+      vi.advanceTimersByTime(60_000);
+      expect(shown(), 'held while swiping').toHaveLength(1);
+
+      element.dispatchEvent(pointer('pointerup', 140));
+      render();
+      expect(element.style.translate).toBe('');
+      vi.advanceTimersByTime(1000 + 300);
+      expect(shown(), 'then extendedTimeOut, as after a hover').toEqual([]);
+    });
+
+    it('takes no swipe from a mouse, or with swipeToDismiss off', () => {
+      setup();
+      toasts.success('mouse', '', { disableTimeOut: true });
+      toasts.success('off', '', { disableTimeOut: true, swipeToDismiss: false });
+      render();
+
+      const [off, mouse] = shown().map(wide);
+      for (const [element, kind] of [[mouse, 'mouse'], [off, 'touch']] as const) {
+        element.dispatchEvent(pointer('pointerdown', 0, kind));
+        element.dispatchEvent(pointer('pointermove', 250, kind));
+        element.dispatchEvent(pointer('pointerup', 250, kind));
+      }
+      vi.advanceTimersByTime(300);
+      expect(shown()).toHaveLength(2);
+    });
+  });
+
+  describe('provideToastTesting', () => {
+    it('removes a closing toast at once, with no fade to wait for', () => {
+      setup(provideToastTesting({ closeButton: true }));
+      const toast = toasts.success('x');
+      const hidden = vi.fn();
+      toast.onHidden.subscribe(hidden);
+      render();
+      expect(shown()[0].querySelector('.toast-close-button'), 'its options apply').not.toBeNull();
+
+      toasts.clear();
+      expect(shown()).toEqual([]);
+      expect(hidden).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('lists the open and waiting toasts on the toasts signal, oldest first', () => {
+    setup(provideToast({ maxOpened: 1 }));
+    const first = toasts.success('1');
+    const second = toasts.success('2');
+    expect(toasts.toasts()).toEqual([first, second]);
+
+    toasts.remove(first.toastId);
+    expect(toasts.toasts()).toEqual([second]);
   });
 
   describe('actions', () => {
