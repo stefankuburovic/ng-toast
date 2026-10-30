@@ -94,7 +94,7 @@ interface OpenToast {
  * Each toast is its own component, created outside any view and attached to the application so
  * that change detection reaches it, inside one container per `positionClass`
  * (`div.toast-container.toast-top-right`, …). The containers sit in one
- * `div.overlay-container[aria-live=polite]` at the end of `body`, created with the first toast.
+ * `div.overlay-container` at the end of `body`, created with the first toast.
  *
  * Every toast first goes into line and comes on screen as soon as `maxOpened` leaves room, which
  * without a limit is at once. A toast that is closing does not count against the limit.
@@ -480,7 +480,8 @@ export class ToastService {
     if (!this.overlay) {
       this.overlay = this.document.createElement('div');
       this.overlay.classList.add('overlay-container');
-      this.overlay.setAttribute('aria-live', 'polite');
+      // No aria-live here: each toast's message is its own live region (status, or alert for an
+      // error), and one inside another would be read twice.
       this.document.body.appendChild(this.overlay);
     }
     return this.overlay;

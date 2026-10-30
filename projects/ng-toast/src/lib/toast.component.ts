@@ -49,13 +49,14 @@ import { ToastPackage } from './toast-package';
       </button>
     }
     @if (title()) {
-      <div [class]="options().titleClass" [attr.aria-label]="title()">{{ title() }}</div>
+      <!-- The live region is the message; a toast with only a title makes the title one. -->
+      <div [class]="options().titleClass" [attr.role]="message() ? null : liveRole()">{{ title() }}</div>
     }
     @if (message()) {
       @if (options().enableHtml) {
-        <div role="alert" [class]="options().messageClass" [innerHTML]="message()"></div>
+        <div [attr.role]="liveRole()" [class]="options().messageClass" [innerHTML]="message()"></div>
       } @else {
-        <div role="alert" [class]="options().messageClass" [attr.aria-label]="message()">{{ message() }}@if (duplicates()) { [{{ duplicates() + 1 }}]}</div>
+        <div [attr.role]="liveRole()" [class]="options().messageClass">{{ message() }}@if (duplicates()) { [{{ duplicates() + 1 }}]}</div>
       }
     }
     @if (options().actions.length) {
@@ -96,6 +97,13 @@ export class ToastComponent implements OnDestroy {
   readonly message = this.toastPackage.message.asReadonly();
   /** How often it came again (`countDuplicates`); `0` for never. */
   protected readonly duplicates = this.toastPackage.duplicates.asReadonly();
+  /**
+   * How a screen reader announces the toast: an error interrupts (`alert`), anything else waits
+   * for a pause (`status`).
+   */
+  protected readonly liveRole = computed(() =>
+    this.toastPackage.toastType().split(/\s+/).includes('toast-error') ? 'alert' : 'status'
+  );
   /** The type class next to the configured ones, e.g. `toast-success ng-toast`. */
   protected readonly toastClasses = computed(
     () => `${this.toastPackage.toastType()} ${this.options().toastClass}`

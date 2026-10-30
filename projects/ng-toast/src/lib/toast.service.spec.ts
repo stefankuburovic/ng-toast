@@ -208,7 +208,7 @@ describe('ToastService', () => {
     expect(shown().map(t => t.textContent?.trim())).toEqual(['2', '1', '3']);
   });
 
-  it('puts each positionClass into a container of its own, all in one live region', () => {
+  it('puts each positionClass into a container of its own, all in one overlay', () => {
     setup();
     toasts.success('top');
     toasts.success('bottom', '', { positionClass: 'toast-bottom-right' });
@@ -216,7 +216,34 @@ describe('ToastService', () => {
 
     expect(shown()).toHaveLength(1);
     expect(shown('toast-bottom-right')).toHaveLength(1);
-    expect(document.querySelectorAll('.overlay-container[aria-live="polite"]')).toHaveLength(1);
+    expect(document.querySelectorAll('.overlay-container')).toHaveLength(1);
+  });
+
+  it('announces an error as an alert and anything else as a status, once', () => {
+    setup();
+    toasts.error('Not saved');
+    toasts.success('Saved');
+    toasts.info('', 'Only a title');
+    render();
+
+    const [title, success, error] = shown();
+    expect(error.querySelector('.toast-message')?.getAttribute('role')).toBe('alert');
+    expect(success.querySelector('.toast-message')?.getAttribute('role')).toBe('status');
+    expect(title.querySelector('.toast-title')?.getAttribute('role')).toBe('status');
+    expect(
+      document.querySelector('.overlay-container')?.hasAttribute('aria-live'),
+      'no live region around the live regions'
+    ).toBe(false);
+  });
+
+  it('turns the status into an alert when an update makes the toast an error', () => {
+    setup();
+    const toast = toasts.info('Saving');
+    render();
+
+    toast.update({ type: 'toast-error', message: 'Not saved' });
+    render();
+    expect(shown()[0].querySelector('.toast-message')?.getAttribute('role')).toBe('alert');
   });
 
   it('renders the message as HTML only with enableHtml', () => {
