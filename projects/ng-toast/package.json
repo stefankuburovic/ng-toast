@@ -1,6 +1,6 @@
 {
   "name": "@stefankuburovic/ng-toast",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Small toast notifications for Angular: signals, zoneless, promise toasts, actions, progress bar, queue. No dependencies beyond @angular/core and rxjs.",
   "keywords": [
     "angular",

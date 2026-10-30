@@ -1,8 +1,8 @@
 # @stefankuburovic/ng-toast
 
 Small toast notifications for Angular. Signals and plain timers, works zoneless, no dependencies
-beyond `@angular/core` (≥ 20.2) and `rxjs`. About 4 kB of JavaScript and 4.5 kB of CSS,
-minified and gzipped.
+beyond `@angular/core` (≥ 20.2) and `rxjs`. About 4.6 kB of JavaScript and 2.7 kB of CSS as
+your production build ships them (minified, gzipped); CI keeps it under a budget.
 
 The API follows [ngx-toastr](https://github.com/scttcper/ngx-toastr) (archived), so moving over
 is mostly a rename. The stylesheet is taken from it.
@@ -157,6 +157,7 @@ errors on the error container. Anything it sets can still be overridden with the
 | `promise(promise, { loading, success, error }, override?)` | A loading toast that turns into success or error. |
 | `clear(toastId?)` | Fades out one toast, or all; waiting ones go at once. |
 | `remove(toastId)` | Takes a toast out at once. `false` when it is not open. |
+| `toasts()` | A signal of the open and waiting toasts, oldest first, e.g. for a count on a bell icon. |
 
 `ActiveToast` has `toastId`, `title()` and `message()` (signals), `componentRef`, `update(changes)`,
 `onShown` (once it is on screen, which for a queued toast is later; replays to late subscribers),
@@ -177,6 +178,7 @@ Every option can be set app-wide with `provideToast` and per call through `overr
 | `progressAnimation` | `decreasing` | or `increasing` |
 | `actions` | `[]` | buttons, see above |
 | `tapToDismiss` | `true` | a click closes it |
+| `swipeToDismiss` | `true` | a finger swiping it sideways closes it (a mouse does not swipe) |
 | `enableHtml` | `false` | message as sanitized HTML |
 | `newestOnTop` | `true` | |
 | `positionClass` | `toast-top-right` | also `toast-top-left`, `toast-bottom-right`, `toast-bottom-left`, `toast-top-center`, `toast-bottom-center`, `toast-top-full-width`, `toast-bottom-full-width`, `toast-center-center` |
@@ -221,6 +223,24 @@ theme.
 | `--ng-toast-stack-visible` | `3` | cards shown while collapsed |
 | `--ng-toast-stack-time` | `300ms` | the spread and collapse |
 
+### Keyboard, touch and screen readers
+
+- Esc closes a toast while the focus is in it, on the × or an action.
+- On a touch screen a toast follows a sideways swipe; let go past a third of its width and it
+  flies out, short of that and it snaps back. Its timer waits meanwhile.
+- An error is announced as an alert (`role="alert"`), interrupting; every other toast as a
+  status (`role="status"`), when the screen reader has a moment.
+- With `prefers-reduced-motion` nothing slides or snaps; the fades stay.
+
+### Testing your app
+
+`provideToastTesting()` is `provideToast` without the fade: a toast that closes is gone at once,
+so a test needs no fake timers to see it go. It takes the same options.
+
+```ts
+TestBed.configureTestingModule({ providers: [provideToastTesting()] });
+```
+
 ### Custom toast
 
 Extend `ToastComponent`, keep an attribute selector (the host is created from it and has to be a
@@ -264,7 +284,16 @@ this.toast.show(html, 'Title', { toastComponent: RichToast, disableTimeOut: true
 npm test         # vitest, jsdom
 npm run demo     # the playground on localhost:4200, built from source
 npm run build    # dist/ng-toast
-npm run release  # test, build, npm publish
+npm run size     # minified + gzipped sizes against their budget
+npm run release  # test, build, npm publish, from your machine
 ```
+
+CI runs the tests, both builds and the size budget on every pull request.
+
+To release, bump `version` in `projects/ng-toast/package.json`, merge, and publish a GitHub
+release tagged `v<version>`: the Release workflow tests, builds and publishes it to npm with
+provenance. It needs no npm token, but npm has to trust it once: on npmjs.com, the package's
+Settings → Trusted publishing → GitHub Actions, with `stefankuburovic` / `ng-toast` and the
+workflow `release.yml`.
 
 MIT
