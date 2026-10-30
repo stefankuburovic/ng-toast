@@ -9,7 +9,7 @@ import { ToastService } from './toast.service';
 /** A custom toast the way a consumer writes one: extends the base, own template, attribute selector. */
 @Component({
   selector: '[custom-toast]',
-  template: `<p class="custom">{{ title }}: {{ message }}</p>`
+  template: `<p class="custom">{{ title() }}: {{ message() }}</p>`
 })
 class CustomToastComponent extends ToastComponent {}
 
@@ -29,8 +29,22 @@ describe('ToastService', () => {
     toasts = TestBed.inject(ToastService);
   };
 
+  /** Sends the page to a background tab, or brings it back. */
+  const setHidden = (hidden: boolean): void => {
+    Object.defineProperty(document, 'hidden', { configurable: true, value: hidden });
+    document.dispatchEvent(new Event('visibilitychange'));
+  };
+
+  /** The text of each toast's message, top to bottom. */
+  const messages = (): (string | undefined)[] =>
+    shown().map(t => t.querySelector('.toast-message')?.textContent ?? undefined);
+
   beforeEach(() => vi.useFakeTimers());
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    vi.useRealTimers();
+    // Drops the own property setHidden put over the prototype's getter.
+    delete (document as { hidden?: boolean }).hidden;
+  });
 
   it('opens a toast with its type class, title and message, without any provider', () => {
     setup();
@@ -240,6 +254,315 @@ describe('ToastService', () => {
     expect(element.tagName, 'an attribute selector gives the div the stylesheet is written for').toBe('DIV');
     expect(element.classList).toContain('toast-info');
     expect(element.querySelector('.custom')?.textContent).toBe('Titel: Text');
+  });
+
+  describe('update', () => {
+    it('changes content, type and options in place and starts the timer over', () => {
+      setup();
+      const toast = toasts.info('Uploading', 'File', { disableTimeOut: true });
+      render();
+      vi.advanceTimersByTime(60_000);
+
+      toast.update({ message: 'Uploaded', type: 'toast-success', disableTimeOut: false });
+      render();
+      const [element] = shown();
+      expect(element.classList).toContain('toast-success');
+      expect(element.classList).not.toContain('toast-info');
+      expect(element.querySelector('.toast-title')?.textContent).toBe('File');
+      expect(toast.message()).toBe('Uploaded');
+
+      vi.advanceTimersByTime(5000 + 300);
+      expect(shown()).toEqual([]);
+    });
+
+    it('does nothing once the toast is gone', () => {
+      setup();
+      const toast = toasts.info('x');
+      toasts.remove(toast.toastId);
+
+      expect(() => toast.update({ message: 'y' })).not.toThrow();
+      expect(toast.message()).toBe('x');
+    });
+  });
+
+  describe('promise', () => {
+    /** A promise and the hands that settle it. */
+    const deferred = <T>() => {
+      let resolve!: (value: T) => void;
+      let reject!: (error: unknown) => void;
+      const promise = new Promise<T>((res, rej) => ((resolve = res), (reject = rej)));
+      return { promise, resolve, reject };
+    };
+
+    it('shows loading, which stays and ignores clicks, then success made from the result', async () => {
+      setup();
+      const { promise, resolve } = deferred<{ name: string }>();
+      toasts.promise(promise, { loading: 'Saving', success: c => `Saved ${c.name}`, error: 'Failed' });
+      render();
+
+      const [element] = shown();
+      expect(element.classList).toContain('toast-loading');
+      element.click();
+      vi.advanceTimersByTime(60_000);
+      expect(shown()).toHaveLength(1);
+
+      resolve({ name: 'Ana' });
+      await Promise.resolve();
+      render();
+      expect(element.classList).toContain('toast-success');
+      expect(messages()).toEqual(['Saved Ana']);
+
+      vi.advanceTimersByTime(5000 + 300);
+      expect(shown(), 'the settled toast has its timer back').toEqual([]);
+    });
+
+    it('turns into an error toast when the promise rejects', async () => {
+      setup();
+      const { promise, reject } = deferred<void>();
+      toasts.promise(promise, {
+        loading: { message: 'Saving', title: 'Customer' },
+        success: 'Saved',
+        error: e => ({ message: String(e), title: 'Not saved' })
+      });
+
+      reject('Offline');
+      await Promise.resolve();
+      render();
+      const [element] = shown();
+      expect(element.classList).toContain('toast-error');
+      expect(element.querySelector('.toast-title')?.textContent).toBe('Not saved');
+      expect(messages()).toEqual(['Offline']);
+    });
+  });
+
+  describe('progress bar', () => {
+    const bar = (): HTMLElement | null => shown()[0].querySelector('.toast-progress');
+
+    it('runs for timeOut, goes while hovered and runs again for extendedTimeOut', () => {
+      setup(provideToast({ progressBar: true }));
+      toasts.success('x');
+      render();
+      const [element] = shown();
+      expect(bar()?.style.animationDuration).toBe('5000ms');
+
+      element.dispatchEvent(new MouseEvent('mouseenter'));
+      render();
+      expect(bar()).toBeNull();
+
+      element.dispatchEvent(new MouseEvent('mouseleave'));
+      render();
+      expect(bar()?.style.animationDuration).toBe('1000ms');
+    });
+
+    it('fills instead of emptying with progressAnimation increasing, and is off by default', () => {
+      setup();
+      toasts.success('x', '', { progressBar: true, progressAnimation: 'increasing' });
+      toasts.success('y');
+      render();
+
+      const [y, x] = shown();
+      expect(x.querySelector('.toast-progress')?.classList).toContain('toast-progress-increasing');
+      expect(y.querySelector('.toast-progress')).toBeNull();
+    });
+  });
+
+  describe('background tab', () => {
+    it('stops the timer while the tab is hidden and runs on from where it stopped', () => {
+      setup();
+      toasts.success('x');
+      render();
+      vi.advanceTimersByTime(3000);
+
+      setHidden(true);
+      render();
+      expect(shown()[0].classList).toContain('toast-paused');
+      vi.advanceTimersByTime(60_000);
+      expect(shown()).toHaveLength(1);
+
+      setHidden(false);
+      vi.advanceTimersByTime(1999);
+      render();
+      expect(shown()[0].classList).not.toContain('toast-out');
+      vi.advanceTimersByTime(1 + 300);
+      expect(shown()).toEqual([]);
+    });
+
+    it('lets the timer run with pauseWhenHidden off', () => {
+      setup();
+      toasts.success('x', '', { pauseWhenHidden: false });
+      setHidden(true);
+
+      vi.advanceTimersByTime(5300);
+      expect(shown()).toEqual([]);
+    });
+  });
+
+  describe('maxOpened', () => {
+    it('keeps the toasts over the limit waiting and brings them up as the open ones go', () => {
+      setup(provideToast({ maxOpened: 2, newestOnTop: false }));
+      const first = toasts.success('1');
+      toasts.success('2');
+      const third = toasts.success('3');
+      render();
+      expect(messages()).toEqual(['1', '2']);
+      expect(third.componentRef.location.nativeElement.isConnected).toBe(false);
+
+      toasts.clear(first.toastId);
+      vi.advanceTimersByTime(300);
+      render();
+      expect(messages()).toEqual(['2', '3']);
+    });
+
+    it('starts the timer of a waiting toast only when it comes up', () => {
+      setup(provideToast({ maxOpened: 1 }));
+      const first = toasts.success('1', '', { disableTimeOut: true });
+      toasts.success('2');
+      vi.advanceTimersByTime(60_000);
+
+      toasts.remove(first.toastId);
+      render();
+      expect(messages()).toEqual(['2']);
+      vi.advanceTimersByTime(5300);
+      expect(shown()).toEqual([]);
+    });
+
+    it('clear takes the waiting toasts away without bringing them up', () => {
+      setup(provideToast({ maxOpened: 1 }));
+      toasts.success('1');
+      const waiting = toasts.success('2');
+      const hidden = vi.fn();
+      waiting.onHidden.subscribe(hidden);
+
+      toasts.clear();
+      expect(hidden).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(300);
+      expect(shown()).toEqual([]);
+    });
+
+    it('reports onShown when a toast comes up: at once, to a late subscriber too, or once there is room', () => {
+      setup(provideToast({ maxOpened: 1 }));
+      const first = toasts.success('1');
+      const second = toasts.success('2');
+      const third = toasts.success('3');
+      const [firstShown, secondShown, thirdShown] = [vi.fn(), vi.fn(), vi.fn()];
+      const thirdDone = vi.fn();
+      first.onShown.subscribe(firstShown);
+      second.onShown.subscribe(secondShown);
+      third.onShown.subscribe({ next: thirdShown, complete: thirdDone });
+
+      expect(firstShown).toHaveBeenCalledTimes(1);
+      expect(secondShown).not.toHaveBeenCalled();
+
+      toasts.remove(first.toastId);
+      expect(secondShown).toHaveBeenCalledTimes(1);
+
+      toasts.remove(third.toastId);
+      expect(thirdShown, 'it went while still waiting').not.toHaveBeenCalled();
+      expect(thirdDone).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes the oldest instead of waiting with autoDismiss', () => {
+      setup(provideToast({ maxOpened: 2, autoDismiss: true, newestOnTop: false }));
+      toasts.success('1');
+      toasts.success('2');
+      toasts.success('3');
+      render();
+      expect(shown()[0].classList).toContain('toast-out');
+
+      vi.advanceTimersByTime(300);
+      expect(messages()).toEqual(['2', '3']);
+    });
+  });
+
+  describe('preventDuplicates', () => {
+    it('hands back the toast that is up instead of opening the same again', () => {
+      setup(provideToast({ preventDuplicates: true }));
+      const first = toasts.error('Offline');
+      const again = toasts.error('Offline');
+      toasts.warning('Offline');
+      toasts.error('Offline', 'Network');
+      render();
+
+      expect(again).toBe(first);
+      expect(shown(), 'another type or title is another toast').toHaveLength(3);
+    });
+
+    it('counts the duplicates with countDuplicates', () => {
+      setup(provideToast({ preventDuplicates: true, countDuplicates: true }));
+      toasts.error('Offline');
+      toasts.error('Offline');
+      toasts.error('Offline');
+      render();
+
+      expect(messages()).toEqual(['Offline [3]']);
+    });
+
+    it('starts the timer over with resetTimeoutOnDuplicate, and not without', () => {
+      setup(provideToast({ preventDuplicates: true, resetTimeoutOnDuplicate: true }));
+      toasts.error('Offline');
+      vi.advanceTimersByTime(4000);
+      toasts.error('Offline');
+
+      vi.advanceTimersByTime(4000);
+      expect(shown()).toHaveLength(1);
+      vi.advanceTimersByTime(1000 + 300);
+      expect(shown()).toEqual([]);
+    });
+
+    it('opens a new one when the one that was up is already closing', () => {
+      setup(provideToast({ preventDuplicates: true }));
+      const first = toasts.error('Offline');
+      toasts.clear();
+
+      expect(toasts.error('Offline')).not.toBe(first);
+    });
+  });
+
+  describe('actions', () => {
+    it('runs the action, reports it on onAction and closes, without counting as a tap', () => {
+      setup();
+      const undo = vi.fn();
+      const action = { label: 'Undo', onClick: undo };
+      const toast = toasts.info('Deleted', '', { actions: [action], tapToDismiss: false });
+      const tapped = vi.fn();
+      const acted = vi.fn();
+      toast.onTap.subscribe(tapped);
+      toast.onAction.subscribe(acted);
+      render();
+
+      const button = shown()[0].querySelector<HTMLElement>('.toast-action');
+      expect(button?.textContent).toBe('Undo');
+      button?.click();
+      vi.advanceTimersByTime(300);
+
+      expect(undo).toHaveBeenCalledTimes(1);
+      expect(acted).toHaveBeenCalledWith(action);
+      expect(tapped).not.toHaveBeenCalled();
+      expect(shown()).toEqual([]);
+    });
+
+    it('puts the action class next to toast-action, and its aria-label on the button', () => {
+      setup();
+      toasts.info('x', '', {
+        actions: [{ label: '↺', class: 'toast-action-primary undo', ariaLabel: 'Undo' }]
+      });
+      render();
+
+      const button = shown()[0].querySelector<HTMLElement>('button.toast-action');
+      expect(button?.classList).toContain('toast-action-primary');
+      expect(button?.classList).toContain('undo');
+      expect(button?.getAttribute('aria-label')).toBe('Undo');
+    });
+
+    it('stays up after an action with dismiss false', () => {
+      setup();
+      toasts.info('x', '', { actions: [{ label: 'Details', dismiss: false }], disableTimeOut: true });
+      render();
+
+      shown()[0].querySelector<HTMLElement>('.toast-action')?.click();
+      vi.advanceTimersByTime(1000);
+      expect(shown()).toHaveLength(1);
+    });
   });
 
   it('takes its toasts and the live region away when the app is destroyed', () => {

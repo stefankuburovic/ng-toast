@@ -1,0 +1,11 @@
+/* The demo builds the library from source, so it runs without `npm run build` first. */
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../out-tsc/demo",
+    "paths": {
+      "@stefankuburovic/ng-toast": ["../ng-toast/src/public-api.ts"]
+    }
+  },
+  "files": ["src/main.ts"]
+}

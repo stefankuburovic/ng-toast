@@ -2,6 +2,23 @@ import { EnvironmentProviders, InjectionToken, Type, makeEnvironmentProviders } 
 
 import type { ToastComponent } from './toast.component';
 
+/** A button in the toast, below the message. */
+export interface ToastAction {
+  /** The button's text. */
+  label: string;
+  /**
+   * Classes next to `toast-action`; `toast-action-primary` is the emphasized look `toast.css`
+   * has, anything else is for your own styles.
+   */
+  class?: string;
+  /** What a screen reader reads instead of the label, e.g. for an icon-only label. */
+  ariaLabel?: string;
+  /** Runs on the click, before the toast closes. The click is also reported on `onAction`. */
+  onClick?: () => void;
+  /** Closes the toast after the click. Default `true`. */
+  dismiss?: boolean;
+}
+
 /**
  * Everything a toast can be told, globally through {@link provideToast} or per call through the
  * `override` argument of every `ToastService` method.
@@ -16,8 +33,19 @@ export interface ToastConfig {
   extendedTimeOut: number;
   /** Keeps the toast up until it is closed, clicked or removed, hover or not. */
   disableTimeOut: boolean;
+  /**
+   * Stops the timer while the page is in a background tab, so a toast is not gone before anyone
+   * could see it. It runs on from where it stopped when the tab comes back.
+   */
+  pauseWhenHidden: boolean;
   /** Draws a × that closes the toast. */
   closeButton: boolean;
+  /** Draws a bar along the bottom that runs down with the timer. */
+  progressBar: boolean;
+  /** `decreasing` empties the bar, `increasing` fills it. */
+  progressAnimation: 'decreasing' | 'increasing';
+  /** Buttons below the message, e.g. an Undo. A click on one is no tap. */
+  actions: readonly ToastAction[];
   /** A click anywhere on the toast closes it. The click is reported on `onTap` either way. */
   tapToDismiss: boolean;
   /**
@@ -50,12 +78,48 @@ export interface ToastConfig {
   toastComponent?: Type<ToastComponent>;
 }
 
+/**
+ * The options that are about all toasts together rather than one, so only {@link provideToast}
+ * takes them.
+ */
+export interface ToastGlobalConfig extends ToastConfig {
+  /**
+   * How many toasts are on screen at once; `0` for no limit. The ones over it wait in line and
+   * come up as the open ones go, unless {@link autoDismiss} makes room for them.
+   */
+  maxOpened: number;
+  /** At {@link maxOpened}, a new toast closes the oldest one instead of waiting. */
+  autoDismiss: boolean;
+  /**
+   * A toast with the type, title and message of one that is open or waiting does not open; the
+   * call hands back the one that is there.
+   */
+  preventDuplicates: boolean;
+  /** With {@link preventDuplicates}, shows how often the toast came, e.g. `Offline [3]`. */
+  countDuplicates: boolean;
+  /** With {@link preventDuplicates}, starts the timer of the toast that is there over. */
+  resetTimeoutOnDuplicate: boolean;
+}
+
+/** What `ActiveToast.update` changes: the content, the type and the options that can change. */
+export interface ToastUpdate
+  extends Partial<Omit<ToastConfig, 'toastComponent' | 'positionClass' | 'newestOnTop'>> {
+  message?: string;
+  title?: string;
+  /** The type class, e.g. `toast-success`. */
+  type?: string;
+}
+
 /** The defaults every option starts from. */
-export const DEFAULT_TOAST_CONFIG: ToastConfig = {
+export const DEFAULT_TOAST_CONFIG: ToastGlobalConfig = {
   timeOut: 5000,
   extendedTimeOut: 1000,
   disableTimeOut: false,
+  pauseWhenHidden: true,
   closeButton: false,
+  progressBar: false,
+  progressAnimation: 'decreasing',
+  actions: [],
   tapToDismiss: true,
   enableHtml: false,
   newestOnTop: true,
@@ -63,14 +127,19 @@ export const DEFAULT_TOAST_CONFIG: ToastConfig = {
   toastClass: 'ng-toast',
   titleClass: 'toast-title',
   messageClass: 'toast-message',
-  easeTime: 300
+  easeTime: 300,
+  maxOpened: 0,
+  autoDismiss: false,
+  preventDuplicates: false,
+  countDuplicates: false,
+  resetTimeoutOnDuplicate: false
 };
 
 /**
  * The app-wide overrides of {@link DEFAULT_TOAST_CONFIG}. Optional: without
  * {@link provideToast} the service runs on the defaults, so a test needs no setup to toast.
  */
-export const TOAST_CONFIG = new InjectionToken<Partial<ToastConfig>>('TOAST_CONFIG');
+export const TOAST_CONFIG = new InjectionToken<Partial<ToastGlobalConfig>>('TOAST_CONFIG');
 
 /**
  * Sets app-wide toast options.
@@ -78,6 +147,6 @@ export const TOAST_CONFIG = new InjectionToken<Partial<ToastConfig>>('TOAST_CONF
  * @example
  * bootstrapApplication(AppComponent, { providers: [provideToast({ timeOut: 3000, closeButton: true })] });
  */
-export function provideToast(config: Partial<ToastConfig> = {}): EnvironmentProviders {
+export function provideToast(config: Partial<ToastGlobalConfig> = {}): EnvironmentProviders {
   return makeEnvironmentProviders([{ provide: TOAST_CONFIG, useValue: config }]);
 }
