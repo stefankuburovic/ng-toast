@@ -1,8 +1,8 @@
 # @stefankuburovic/ng-toast
 
 Small toast notifications for Angular. Signals and plain timers, works zoneless, no dependencies
-beyond `@angular/core` (≥ 20.2) and `rxjs`. About 3.5 kB of JavaScript and 3 kB of CSS, minified
-and gzipped.
+beyond `@angular/core` (≥ 20.2) and `rxjs`. About 3.5 kB of JavaScript and 3.5 kB of CSS,
+minified and gzipped.
 
 The API follows [ngx-toastr](https://github.com/scttcper/ngx-toastr) (archived), so moving over
 is mostly a rename. The stylesheet is taken from it.
@@ -77,6 +77,75 @@ this.toast.info('Customer deleted', '', {
 A click on an action runs `onClick`, emits on `onAction` and closes the toast, unless the action
 has `dismiss: false`. It is never a tap.
 
+| Action field | |
+| --- | --- |
+| `label` | the button's text |
+| `onClick` | runs on the click |
+| `dismiss` | `false` keeps the toast up; default `true` |
+| `class` | classes next to `toast-action`; `toast-action-primary` is the emphasized look |
+| `ariaLabel` | what a screen reader reads instead of the label |
+
+```ts
+this.toast.error('Could not save', '', {
+  actions: [
+    { label: 'Details', dismiss: false, onClick: () => this.openLog() },
+    { label: 'Retry', class: 'toast-action-primary', onClick: () => this.save() }
+  ]
+});
+```
+
+## Theming
+
+Every color and size in `toast.css` comes from a CSS variable, with the default as fallback.
+Set them anywhere above the toasts: `:root` for the whole app, or a class of your own for one
+kind of toast. No selectors to out-specify.
+
+```css
+:root {
+  --ng-toast-radius: 8px;
+  --ng-toast-font: 500 14px/20px Inter, sans-serif;
+  --ng-toast-success-bg: #1e7d4f;
+}
+
+/* one kind of toast: provideToast({ toastClass: 'ng-toast brand' }) or per call */
+.brand {
+  --ng-toast-bg: #111827;
+  --ng-toast-icon-color: #facc15;
+}
+```
+
+| Variables | |
+| --- | --- |
+| `--ng-toast-bg`, `--ng-toast-color` | a toast without a type, and the text of every one |
+| `--ng-toast-{success,error,info,warning,loading}-bg` / `-color` | per type |
+| `--ng-toast-icon-color` | type icons and the spinner (they are masks, so any color works); default the text color |
+| `--ng-toast-icon` | the icon itself, a `url(…)`; set it on `.toast-success` etc. to replace one |
+| `--ng-toast-width`, `-padding`, `-radius`, `-gap`, `-offset`, `-z-index` | size and place |
+| `--ng-toast-shadow`, `-shadow-hover` | |
+| `--ng-toast-font`, `-title-font`, `-title-weight` | type |
+| `--ng-toast-close-color`, `-close-hover-color`, `-close-shadow` | the × |
+| `--ng-toast-link-color`, `-link-hover-color` | links in an HTML message |
+| `--ng-toast-action-{bg,color,border,radius,padding,font,weight,hover-bg}` | action buttons |
+| `--ng-toast-action-primary-{bg,color,hover-bg}` | `toast-action-primary` |
+| `--ng-toast-progress-{color,opacity,height}` | the progress bar |
+
+### Angular Material
+
+`toast-material.css` sets these variables from Material 3's system variables, so the toasts look
+like `MatSnackBar` and follow the app's palette, shape, typography and light or dark mode:
+
+```json
+"styles": [
+  "node_modules/@stefankuburovic/ng-toast/toast.css",
+  "node_modules/@stefankuburovic/ng-toast/toast-material.css",
+  "src/styles.scss"
+]
+```
+
+It needs a theme that emits the `--mat-sys-*` variables (`@include mat.theme(…)`, Angular
+Material 19+). Toasts sit on the inverse surface with icons and actions in the inverse primary,
+errors on the error container. Anything it sets can still be overridden with the variables above.
+
 ### `ToastService`
 
 | Method | |
@@ -88,6 +157,7 @@ has `dismiss: false`. It is never a tap.
 | `remove(toastId)` | Takes a toast out at once. `false` when it is not open. |
 
 `ActiveToast` has `toastId`, `title()` and `message()` (signals), `componentRef`, `update(changes)`,
+`onShown` (once it is on screen, which for a queued toast is later; replays to late subscribers),
 `onTap` (every click), `onAction` (every action) and `onHidden` (once, however the toast went).
 
 ### Options
@@ -150,6 +220,8 @@ this.toast.show(html, 'Title', { toastComponent: RichToast, disableTimeOut: true
   `options().closeButton`. `closing` is public and read-only.
 - The timer starts when the service calls `start()`, no longer in the constructor.
 - `pauseWhenHidden` is on by default; set it to `false` for the old behavior.
+- Type icons are a `::before` mask instead of a `background-image`. A stylesheet that replaced an
+  icon with `background-image` sets `--ng-toast-icon` on the type class instead.
 
 ## Coming from ngx-toastr
 
@@ -159,8 +231,8 @@ this.toast.show(html, 'Title', { toastComponent: RichToast, disableTimeOut: true
 - Default class `ngx-toastr` → `ng-toast`.
 - A duplicate is a toast with the same type, title and message; `includeTitleDuplicates` is gone.
   `show` hands back the open toast instead of `null`.
-- Not carried over: `onShown`, `iconClasses`, the `toastContainer` directive and NgModules other
-  than none.
+- `iconClasses` → the type classes and `--ng-toast-icon`.
+- Not carried over: the `toastContainer` directive and NgModules other than none.
 
 ## Develop
 

@@ -30,35 +30,42 @@
   width: 100%;
 }
 .toast-top-left {
-  top: 12px;
-  left: 12px;
+  top: var(--ng-toast-offset, 12px);
+  left: var(--ng-toast-offset, 12px);
 }
 .toast-top-right {
-  top: 12px;
-  right: 12px;
+  top: var(--ng-toast-offset, 12px);
+  right: var(--ng-toast-offset, 12px);
 }
 .toast-bottom-right {
-  right: 12px;
-  bottom: 12px;
+  right: var(--ng-toast-offset, 12px);
+  bottom: var(--ng-toast-offset, 12px);
 }
 .toast-bottom-left {
-  bottom: 12px;
-  left: 12px;
+  bottom: var(--ng-toast-offset, 12px);
+  left: var(--ng-toast-offset, 12px);
 }
+
+/*
+ * theme: every color and size below reads a --ng-toast-* variable, with the old value as the
+ * fallback. Set them on :root, .overlay-container or a toastClass of your own; see the README for
+ * the list, and toast-material.css for a theme that follows Angular Material.
+ */
 
 /* toast styles */
 .toast-title {
-  font-weight: bold;
+  font: var(--ng-toast-title-font, inherit);
+  font-weight: var(--ng-toast-title-weight, bold);
 }
 .toast-message {
   word-wrap: break-word;
 }
 .toast-message a,
 .toast-message label {
-  color: #FFFFFF;
+  color: var(--ng-toast-link-color, #FFFFFF);
 }
 .toast-message a:hover {
-  color: #CCCCCC;
+  color: var(--ng-toast-link-hover-color, #CCCCCC);
   text-decoration: none;
 }
 .toast-close-button {
@@ -68,13 +75,12 @@
   float: right;
   font-size: 20px;
   font-weight: bold;
-  color: #FFFFFF;
-  text-shadow: 0 1px 0 #ffffff;
-  /* opacity: 0.8; */
+  color: var(--ng-toast-close-color, #FFFFFF);
+  text-shadow: var(--ng-toast-close-shadow, 0 1px 0 #ffffff);
 }
 .toast-close-button:hover,
 .toast-close-button:focus {
-  color: #000000;
+  color: var(--ng-toast-close-hover-color, #000000);
   text-decoration: none;
   cursor: pointer;
   opacity: 0.4;
@@ -91,7 +97,7 @@ button.toast-close-button {
 .toast-container {
   pointer-events: none;
   position: fixed;
-  z-index: 999999;
+  z-index: var(--ng-toast-z-index, 999999);
 }
 .toast-container * {
   box-sizing: border-box;
@@ -99,40 +105,54 @@ button.toast-close-button {
 .toast-container .ng-toast {
   position: relative;
   overflow: hidden;
-  margin: 0 0 6px;
-  padding: 15px 15px 15px 50px;
-  width: 300px;
-  border-radius: 3px 3px 3px 3px;
-  background-position: 15px center;
-  background-repeat: no-repeat;
-  background-size: 24px;
-  box-shadow: 0 0 12px #999999;
-  color: #FFFFFF;
+  margin: 0 0 var(--ng-toast-gap, 6px);
+  padding: var(--ng-toast-padding, 15px 15px 15px 50px);
+  width: var(--ng-toast-width, 300px);
+  border-radius: var(--ng-toast-radius, 3px);
+  box-shadow: var(--ng-toast-shadow, 0 0 12px #999999);
+  font: var(--ng-toast-font, inherit);
 }
 .toast-container .ng-toast:hover {
-  box-shadow: 0 0 12px #000000;
+  box-shadow: var(--ng-toast-shadow-hover, 0 0 12px #000000);
   opacity: 1;
   cursor: pointer;
 }
+
+/* the type icon, drawn as a mask so that it takes --ng-toast-icon-color */
+.toast-container .toast-success::before,
+.toast-container .toast-error::before,
+.toast-container .toast-info::before,
+.toast-container .toast-warning::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 15px;
+  width: 24px;
+  height: 24px;
+  margin-top: -12px;
+  background-color: var(--ng-toast-icon-color, currentColor);
+  -webkit-mask: var(--ng-toast-icon) center / contain no-repeat;
+  mask: var(--ng-toast-icon) center / contain no-repeat;
+}
 /* https://github.com/FortAwesome/Font-Awesome-Pro/blob/master/advanced-options/raw-svg/regular/info-circle.svg */
 .toast-info {
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1MTIgNTEyJyB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMic+PHBhdGggZmlsbD0ncmdiKDI1NSwyNTUsMjU1KScgZD0nTTI1NiA4QzExOS4wNDMgOCA4IDExOS4wODMgOCAyNTZjMCAxMzYuOTk3IDExMS4wNDMgMjQ4IDI0OCAyNDhzMjQ4LTExMS4wMDMgMjQ4LTI0OEM1MDQgMTE5LjA4MyAzOTIuOTU3IDggMjU2IDh6bTAgMTEwYzIzLjE5NiAwIDQyIDE4LjgwNCA0MiA0MnMtMTguODA0IDQyLTQyIDQyLTQyLTE4LjgwNC00Mi00MiAxOC44MDQtNDIgNDItNDJ6bTU2IDI1NGMwIDYuNjI3LTUuMzczIDEyLTEyIDEyaC04OGMtNi42MjcgMC0xMi01LjM3My0xMi0xMnYtMjRjMC02LjYyNyA1LjM3My0xMiAxMi0xMmgxMnYtNjRoLTEyYy02LjYyNyAwLTEyLTUuMzczLTEyLTEydi0yNGMwLTYuNjI3IDUuMzczLTEyIDEyLTEyaDY0YzYuNjI3IDAgMTIgNS4zNzMgMTIgMTJ2MTAwaDEyYzYuNjI3IDAgMTIgNS4zNzMgMTIgMTJ2MjR6Jy8+PC9zdmc+");
+  --ng-toast-icon: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1MTIgNTEyJyB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMic+PHBhdGggZmlsbD0ncmdiKDI1NSwyNTUsMjU1KScgZD0nTTI1NiA4QzExOS4wNDMgOCA4IDExOS4wODMgOCAyNTZjMCAxMzYuOTk3IDExMS4wNDMgMjQ4IDI0OCAyNDhzMjQ4LTExMS4wMDMgMjQ4LTI0OEM1MDQgMTE5LjA4MyAzOTIuOTU3IDggMjU2IDh6bTAgMTEwYzIzLjE5NiAwIDQyIDE4LjgwNCA0MiA0MnMtMTguODA0IDQyLTQyIDQyLTQyLTE4LjgwNC00Mi00MiAxOC44MDQtNDIgNDItNDJ6bTU2IDI1NGMwIDYuNjI3LTUuMzczIDEyLTEyIDEyaC04OGMtNi42MjcgMC0xMi01LjM3My0xMi0xMnYtMjRjMC02LjYyNyA1LjM3My0xMiAxMi0xMmgxMnYtNjRoLTEyYy02LjYyNyAwLTEyLTUuMzczLTEyLTEydi0yNGMwLTYuNjI3IDUuMzczLTEyIDEyLTEyaDY0YzYuNjI3IDAgMTIgNS4zNzMgMTIgMTJ2MTAwaDEyYzYuNjI3IDAgMTIgNS4zNzMgMTIgMTJ2MjR6Jy8+PC9zdmc+");
 }
 /* https://github.com/FortAwesome/Font-Awesome-Pro/blob/master/advanced-options/raw-svg/regular/times-circle.svg */
 .toast-error {
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1MTIgNTEyJyB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMic+PHBhdGggZmlsbD0ncmdiKDI1NSwyNTUsMjU1KScgZD0nTTI1NiA4QzExOSA4IDggMTE5IDggMjU2czExMSAyNDggMjQ4IDI0OCAyNDgtMTExIDI0OC0yNDhTMzkzIDggMjU2IDh6bTEyMS42IDMxMy4xYzQuNyA0LjcgNC43IDEyLjMgMCAxN0wzMzggMzc3LjZjLTQuNyA0LjctMTIuMyA0LjctMTcgMEwyNTYgMzEybC02NS4xIDY1LjZjLTQuNyA0LjctMTIuMyA0LjctMTcgMEwxMzQuNCAzMzhjLTQuNy00LjctNC43LTEyLjMgMC0xN2w2NS42LTY1LTY1LjYtNjUuMWMtNC43LTQuNy00LjctMTIuMyAwLTE3bDM5LjYtMzkuNmM0LjctNC43IDEyLjMtNC43IDE3IDBsNjUgNjUuNyA2NS4xLTY1LjZjNC43LTQuNyAxMi4zLTQuNyAxNyAwbDM5LjYgMzkuNmM0LjcgNC43IDQuNyAxMi4zIDAgMTdMMzEyIDI1Nmw2NS42IDY1LjF6Jy8+PC9zdmc+");
+  --ng-toast-icon: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1MTIgNTEyJyB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMic+PHBhdGggZmlsbD0ncmdiKDI1NSwyNTUsMjU1KScgZD0nTTI1NiA4QzExOSA4IDggMTE5IDggMjU2czExMSAyNDggMjQ4IDI0OCAyNDgtMTExIDI0OC0yNDhTMzkzIDggMjU2IDh6bTEyMS42IDMxMy4xYzQuNyA0LjcgNC43IDEyLjMgMCAxN0wzMzggMzc3LjZjLTQuNyA0LjctMTIuMyA0LjctMTcgMEwyNTYgMzEybC02NS4xIDY1LjZjLTQuNyA0LjctMTIuMyA0LjctMTcgMEwxMzQuNCAzMzhjLTQuNy00LjctNC43LTEyLjMgMC0xN2w2NS42LTY1LTY1LjYtNjUuMWMtNC43LTQuNy00LjctMTIuMyAwLTE3bDM5LjYtMzkuNmM0LjctNC43IDEyLjMtNC43IDE3IDBsNjUgNjUuNyA2NS4xLTY1LjZjNC43LTQuNyAxMi4zLTQuNyAxNyAwbDM5LjYgMzkuNmM0LjcgNC43IDQuNyAxMi4zIDAgMTdMMzEyIDI1Nmw2NS42IDY1LjF6Jy8+PC9zdmc+");
 }
 /* https://github.com/FortAwesome/Font-Awesome-Pro/blob/master/advanced-options/raw-svg/regular/check.svg */
 .toast-success {
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1MTIgNTEyJyB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMic+PHBhdGggZmlsbD0ncmdiKDI1NSwyNTUsMjU1KScgZD0nTTE3My44OTggNDM5LjQwNGwtMTY2LjQtMTY2LjRjLTkuOTk3LTkuOTk3LTkuOTk3LTI2LjIwNiAwLTM2LjIwNGwzNi4yMDMtMzYuMjA0YzkuOTk3LTkuOTk4IDI2LjIwNy05Ljk5OCAzNi4yMDQgMEwxOTIgMzEyLjY5IDQzMi4wOTUgNzIuNTk2YzkuOTk3LTkuOTk3IDI2LjIwNy05Ljk5NyAzNi4yMDQgMGwzNi4yMDMgMzYuMjA0YzkuOTk3IDkuOTk3IDkuOTk3IDI2LjIwNiAwIDM2LjIwNGwtMjk0LjQgMjk0LjQwMWMtOS45OTggOS45OTctMjYuMjA3IDkuOTk3LTM2LjIwNC0uMDAxeicvPjwvc3ZnPg==");
+  --ng-toast-icon: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1MTIgNTEyJyB3aWR0aD0nNTEyJyBoZWlnaHQ9JzUxMic+PHBhdGggZmlsbD0ncmdiKDI1NSwyNTUsMjU1KScgZD0nTTE3My44OTggNDM5LjQwNGwtMTY2LjQtMTY2LjRjLTkuOTk3LTkuOTk3LTkuOTk3LTI2LjIwNiAwLTM2LjIwNGwzNi4yMDMtMzYuMjA0YzkuOTk3LTkuOTk4IDI2LjIwNy05Ljk5OCAzNi4yMDQgMEwxOTIgMzEyLjY5IDQzMi4wOTUgNzIuNTk2YzkuOTk3LTkuOTk3IDI2LjIwNy05Ljk5NyAzNi4yMDQgMGwzNi4yMDMgMzYuMjA0YzkuOTk3IDkuOTk3IDkuOTk3IDI2LjIwNiAwIDM2LjIwNGwtMjk0LjQgMjk0LjQwMWMtOS45OTggOS45OTctMjYuMjA3IDkuOTk3LTM2LjIwNC0uMDAxeicvPjwvc3ZnPg==");
 }
 /* https://github.com/FortAwesome/Font-Awesome-Pro/blob/master/advanced-options/raw-svg/regular/exclamation-triangle.svg */
 .toast-warning {
-  background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1NzYgNTEyJyB3aWR0aD0nNTc2JyBoZWlnaHQ9JzUxMic+PHBhdGggZmlsbD0ncmdiKDI1NSwyNTUsMjU1KScgZD0nTTU2OS41MTcgNDQwLjAxM0M1ODcuOTc1IDQ3Mi4wMDcgNTY0LjgwNiA1MTIgNTI3Ljk0IDUxMkg0OC4wNTRjLTM2LjkzNyAwLTU5Ljk5OS00MC4wNTUtNDEuNTc3LTcxLjk4N0wyNDYuNDIzIDIzLjk4NWMxOC40NjctMzIuMDA5IDY0LjcyLTMxLjk1MSA4My4xNTQgMGwyMzkuOTQgNDE2LjAyOHpNMjg4IDM1NGMtMjUuNDA1IDAtNDYgMjAuNTk1LTQ2IDQ2czIwLjU5NSA0NiA0NiA0NiA0Ni0yMC41OTUgNDYtNDYtMjAuNTk1LTQ2LTQ2LTQ2em0tNDMuNjczLTE2NS4zNDZsNy40MTggMTM2Yy4zNDcgNi4zNjQgNS42MDkgMTEuMzQ2IDExLjk4MiAxMS4zNDZoNDguNTQ2YzYuMzczIDAgMTEuNjM1LTQuOTgyIDExLjk4Mi0xMS4zNDZsNy40MTgtMTM2Yy4zNzUtNi44NzQtNS4wOTgtMTIuNjU0LTExLjk4Mi0xMi42NTRoLTYzLjM4M2MtNi44ODQgMC0xMi4zNTYgNS43OC0xMS45ODEgMTIuNjU0eicvPjwvc3ZnPg==");
+  --ng-toast-icon: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCA1NzYgNTEyJyB3aWR0aD0nNTc2JyBoZWlnaHQ9JzUxMic+PHBhdGggZmlsbD0ncmdiKDI1NSwyNTUsMjU1KScgZD0nTTU2OS41MTcgNDQwLjAxM0M1ODcuOTc1IDQ3Mi4wMDcgNTY0LjgwNiA1MTIgNTI3Ljk0IDUxMkg0OC4wNTRjLTM2LjkzNyAwLTU5Ljk5OS00MC4wNTUtNDEuNTc3LTcxLjk4N0wyNDYuNDIzIDIzLjk4NWMxOC40NjctMzIuMDA5IDY0LjcyLTMxLjk1MSA4My4xNTQgMGwyMzkuOTQgNDE2LjAyOHpNMjg4IDM1NGMtMjUuNDA1IDAtNDYgMjAuNTk1LTQ2IDQ2czIwLjU5NSA0NiA0NiA0NiA0Ni0yMC41OTUgNDYtNDYtMjAuNTk1LTQ2LTQ2LTQ2em0tNDMuNjczLTE2NS4zNDZsNy40MTggMTM2Yy4zNDcgNi4zNjQgNS42MDkgMTEuMzQ2IDExLjk4MiAxMS4zNDZoNDguNTQ2YzYuMzczIDAgMTEuNjM1LTQuOTgyIDExLjk4Mi0xMS4zNDZsNy40MTgtMTM2Yy4zNzUtNi44NzQtNS4wOTgtMTIuNjU0LTExLjk4Mi0xMi42NTRoLTYzLjM4M2MtNi44ODQgMC0xMi4zNTYgNS43OC0xMS45ODEgMTIuNjU0eicvPjwvc3ZnPg==");
 }
 .toast-container.toast-top-center .ng-toast,
 .toast-container.toast-bottom-center .ng-toast {
-  width: 300px;
+  width: var(--ng-toast-width, 300px);
   margin-left: auto;
   margin-right: auto;
 }
@@ -142,24 +162,31 @@ button.toast-close-button {
   margin-left: auto;
   margin-right: auto;
 }
+/* one class each, so that a type's colors win over the base ones by coming later */
 .ng-toast {
-  background-color: #030303;
+  background-color: var(--ng-toast-bg, #030303);
+  color: var(--ng-toast-color, #FFFFFF);
   pointer-events: auto;
 }
 .toast-success {
-  background-color: #51A351;
+  background-color: var(--ng-toast-success-bg, #51A351);
+  color: var(--ng-toast-success-color, var(--ng-toast-color, #FFFFFF));
 }
 .toast-error {
-  background-color: #BD362F;
+  background-color: var(--ng-toast-error-bg, #BD362F);
+  color: var(--ng-toast-error-color, var(--ng-toast-color, #FFFFFF));
 }
 .toast-info {
-  background-color: #2F96B4;
+  background-color: var(--ng-toast-info-bg, #2F96B4);
+  color: var(--ng-toast-info-color, var(--ng-toast-color, #FFFFFF));
 }
 .toast-warning {
-  background-color: #F89406;
+  background-color: var(--ng-toast-warning-bg, #F89406);
+  color: var(--ng-toast-warning-color, var(--ng-toast-color, #FFFFFF));
 }
 .toast-loading {
-  background-color: #2F96B4;
+  background-color: var(--ng-toast-loading-bg, #2F96B4);
+  color: var(--ng-toast-loading-color, var(--ng-toast-color, #FFFFFF));
 }
 
 /* loading: a spinner where the other types have their icon */
@@ -171,10 +198,23 @@ button.toast-close-button {
   width: 20px;
   height: 20px;
   margin-top: -10px;
-  border: 3px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #FFFFFF;
+  border: 3px solid transparent;
+  border-top-color: var(--ng-toast-icon-color, currentColor);
   border-radius: 50%;
   animation: ng-toast-spin 0.8s linear infinite;
+}
+/* the faint ring under the spinning arc, in the same color */
+.toast-container .toast-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 17px;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  border: 3px solid var(--ng-toast-icon-color, currentColor);
+  border-radius: 50%;
+  opacity: 0.35;
 }
 
 @keyframes ng-toast-spin {
@@ -191,18 +231,28 @@ button.toast-close-button {
   margin-top: 8px;
 }
 .toast-action {
-  padding: 4px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 3px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: bold;
+  padding: var(--ng-toast-action-padding, 4px 10px);
+  border: var(--ng-toast-action-border, 1px solid rgba(255, 255, 255, 0.6));
+  border-radius: var(--ng-toast-action-radius, 3px);
+  background: var(--ng-toast-action-bg, transparent);
+  color: var(--ng-toast-action-color, inherit);
+  font: var(--ng-toast-action-font, inherit);
+  font-weight: var(--ng-toast-action-weight, bold);
   cursor: pointer;
 }
 .toast-action:hover,
 .toast-action:focus-visible {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--ng-toast-action-hover-bg, rgba(255, 255, 255, 0.2));
+}
+/* the emphasized one, for `class: 'toast-action-primary'` */
+.toast-action.toast-action-primary {
+  border-color: transparent;
+  background: var(--ng-toast-action-primary-bg, rgba(255, 255, 255, 0.9));
+  color: var(--ng-toast-action-primary-color, #222222);
+}
+.toast-action.toast-action-primary:hover,
+.toast-action.toast-action-primary:focus-visible {
+  background: var(--ng-toast-action-primary-hover-bg, #FFFFFF);
 }
 
 /* progress bar; ToastComponent sets its animation-duration to the timer's run */
@@ -211,9 +261,9 @@ button.toast-close-button {
   left: 0;
   bottom: 0;
   width: 100%;
-  height: 4px;
-  background-color: #000000;
-  opacity: 0.4;
+  height: var(--ng-toast-progress-height, 4px);
+  background-color: var(--ng-toast-progress-color, #000000);
+  opacity: var(--ng-toast-progress-opacity, 0.4);
   transform-origin: left;
   animation: ng-toast-progress linear forwards;
 }

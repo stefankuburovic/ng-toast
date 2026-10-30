@@ -6,6 +6,13 @@ import type { ToastComponent } from './toast.component';
 export interface ToastAction {
   /** The button's text. */
   label: string;
+  /**
+   * Classes next to `toast-action`; `toast-action-primary` is the emphasized look `toast.css`
+   * has, anything else is for your own styles.
+   */
+  class?: string;
+  /** What a screen reader reads instead of the label, e.g. for an icon-only label. */
+  ariaLabel?: string;
   /** Runs on the click, before the toast closes. The click is also reported on `onAction`. */
   onClick?: () => void;
   /** Closes the toast after the click. Default `true`. */

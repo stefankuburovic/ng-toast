@@ -439,6 +439,28 @@ describe('ToastService', () => {
       expect(shown()).toEqual([]);
     });
 
+    it('reports onShown when a toast comes up: at once, to a late subscriber too, or once there is room', () => {
+      setup(provideToast({ maxOpened: 1 }));
+      const first = toasts.success('1');
+      const second = toasts.success('2');
+      const third = toasts.success('3');
+      const [firstShown, secondShown, thirdShown] = [vi.fn(), vi.fn(), vi.fn()];
+      const thirdDone = vi.fn();
+      first.onShown.subscribe(firstShown);
+      second.onShown.subscribe(secondShown);
+      third.onShown.subscribe({ next: thirdShown, complete: thirdDone });
+
+      expect(firstShown).toHaveBeenCalledTimes(1);
+      expect(secondShown).not.toHaveBeenCalled();
+
+      toasts.remove(first.toastId);
+      expect(secondShown).toHaveBeenCalledTimes(1);
+
+      toasts.remove(third.toastId);
+      expect(thirdShown, 'it went while still waiting').not.toHaveBeenCalled();
+      expect(thirdDone).toHaveBeenCalledTimes(1);
+    });
+
     it('closes the oldest instead of waiting with autoDismiss', () => {
       setup(provideToast({ maxOpened: 2, autoDismiss: true, newestOnTop: false }));
       toasts.success('1');
@@ -517,6 +539,19 @@ describe('ToastService', () => {
       expect(acted).toHaveBeenCalledWith(action);
       expect(tapped).not.toHaveBeenCalled();
       expect(shown()).toEqual([]);
+    });
+
+    it('puts the action class next to toast-action, and its aria-label on the button', () => {
+      setup();
+      toasts.info('x', '', {
+        actions: [{ label: '↺', class: 'toast-action-primary undo', ariaLabel: 'Undo' }]
+      });
+      render();
+
+      const button = shown()[0].querySelector<HTMLElement>('button.toast-action');
+      expect(button?.classList).toContain('toast-action-primary');
+      expect(button?.classList).toContain('undo');
+      expect(button?.getAttribute('aria-label')).toBe('Undo');
     });
 
     it('stays up after an action with dismiss false', () => {

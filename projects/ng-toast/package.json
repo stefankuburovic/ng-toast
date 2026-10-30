@@ -28,6 +28,10 @@
     "./toast.css": {
       "style": "./toast.css",
       "default": "./toast.css"
+    },
+    "./toast-material.css": {
+      "style": "./toast-material.css",
+      "default": "./toast-material.css"
     }
   },
   "sideEffects": [

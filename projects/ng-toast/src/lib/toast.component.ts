@@ -61,7 +61,13 @@ import { ToastPackage } from './toast-package';
     @if (options().actions.length) {
       <div class="toast-actions">
         @for (action of options().actions; track action) {
-          <button (click)="runAction(action, $event)" type="button" class="toast-action">{{ action.label }}</button>
+          <button
+            (click)="runAction(action, $event)"
+            type="button"
+            class="toast-action"
+            [class]="action.class ?? ''"
+            [attr.aria-label]="action.ariaLabel"
+          >{{ action.label }}</button>
         }
       </div>
     }

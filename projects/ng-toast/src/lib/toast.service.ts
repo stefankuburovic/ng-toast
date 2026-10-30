@@ -9,7 +9,7 @@ import {
   createComponent,
   inject
 } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
+import { Observable, ReplaySubject, Subject } from 'rxjs';
 
 import {
   DEFAULT_TOAST_CONFIG,
@@ -35,6 +35,12 @@ export interface ActiveToast<C extends ToastComponent = ToastComponent> {
    * room (`maxOpened`) has its component already, but it is not in the page yet.
    */
   readonly componentRef: ComponentRef<C>;
+  /**
+   * Emits once and completes when the toast comes on screen: at once, or, for one that waited for
+   * room, later. A late subscriber still gets it. Completes without emitting for a toast that went
+   * while still waiting.
+   */
+  readonly onShown: Observable<void>;
   /** Emits on every click on the toast; completes when it is gone. */
   readonly onTap: Observable<void>;
   /** Emits the action whose button was clicked; completes when the toast is gone. */
@@ -72,6 +78,8 @@ export interface ToastPromiseSteps<T> {
 interface OpenToast {
   /** What the caller got. */
   readonly active: ActiveToast;
+  /** Fires `onShown`; replays, since a toast with room is shown before `show` returns. */
+  readonly shown: ReplaySubject<void>;
   /** Fires `onHidden`. */
   readonly hidden: Subject<void>;
   /** Completes `onTap` and `onAction`, and holds what `update` changes. */
@@ -186,18 +194,20 @@ export class ToastService {
     }) as ComponentRef<C>;
     this.appRef.attachView(componentRef.hostView);
 
+    const shown = new ReplaySubject<void>(1);
     const hidden = new Subject<void>();
     const active: ActiveToast<C> = {
       toastId,
       title: toastPackage.title.asReadonly(),
       message: toastPackage.message.asReadonly(),
       componentRef,
+      onShown: shown.asObservable(),
       onTap: toastPackage.tapped.asObservable(),
       onAction: toastPackage.actions.asObservable(),
       onHidden: hidden.asObservable(),
       update: changes => this.update(toastId, changes)
     };
-    this.toasts.set(toastId, { active, hidden, toastPackage, queued: true });
+    this.toasts.set(toastId, { active, shown, hidden, toastPackage, queued: true });
 
     const { maxOpened, autoDismiss } = this.config;
     if (maxOpened && autoDismiss) {
@@ -350,6 +360,8 @@ export class ToastService {
       newestOnTop ? pane.firstChild : null
     );
     toast.active.componentRef.instance.start();
+    toast.shown.next();
+    toast.shown.complete();
   }
 
   /** Takes a toast out at once and fires its `onHidden`, without letting waiting ones up. */
@@ -361,6 +373,7 @@ export class ToastService {
     componentRef.location.nativeElement.remove();
     toast.toastPackage.tapped.complete();
     toast.toastPackage.actions.complete();
+    toast.shown.complete();
     toast.hidden.next();
     toast.hidden.complete();
   }

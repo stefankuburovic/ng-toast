@@ -1,0 +1,64 @@
+/*
+ * @stefankuburovic/ng-toast, MIT.
+ *
+ * A theme that follows Angular Material 3: load it after toast.css. It only sets the
+ * --ng-toast-* variables toast.css reads, from the --mat-sys-* system variables that
+ * `@include mat.theme(…)` puts on the page, so the toasts take the app's colors, shape, type and
+ * light or dark mode the way MatSnackBar does. Each variable falls back to the M3 baseline for a
+ * page without a Material theme.
+ *
+ * Like the snack bar, toasts sit on the inverse surface, with the icon and actions in the inverse
+ * primary color; an error sits on the error container, so it stands out.
+ */
+.overlay-container {
+  --ng-toast-bg: var(--mat-sys-inverse-surface, #322F35);
+  --ng-toast-color: var(--mat-sys-inverse-on-surface, #F5EFF7);
+  --ng-toast-success-bg: var(--ng-toast-bg);
+  --ng-toast-info-bg: var(--ng-toast-bg);
+  --ng-toast-warning-bg: var(--ng-toast-bg);
+  --ng-toast-loading-bg: var(--ng-toast-bg);
+  --ng-toast-error-bg: var(--mat-sys-error-container, #F9DEDC);
+  --ng-toast-error-color: var(--mat-sys-on-error-container, #410E0B);
+  --ng-toast-icon-color: var(--mat-sys-inverse-primary, #D0BCFF);
+
+  --ng-toast-radius: var(--mat-sys-corner-extra-small, 4px);
+  --ng-toast-shadow: var(--mat-sys-level3, 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15));
+  --ng-toast-shadow-hover: var(--mat-sys-level4, 0 2px 3px rgba(0, 0, 0, 0.3), 0 6px 10px 4px rgba(0, 0, 0, 0.15));
+  --ng-toast-font: var(--mat-sys-body-medium, 400 0.875rem / 1.25rem Roboto, sans-serif);
+  --ng-toast-title-font: var(--mat-sys-title-small, 500 0.875rem / 1.25rem Roboto, sans-serif);
+  --ng-toast-title-weight: 500;
+  --ng-toast-width: 344px;
+  --ng-toast-padding: 14px 16px 14px 52px;
+  --ng-toast-gap: 8px;
+
+  /* the text color of the toast it is on, which differs for an error */
+  --ng-toast-close-color: currentColor;
+  --ng-toast-close-hover-color: currentColor;
+  --ng-toast-close-shadow: none;
+  --ng-toast-link-color: var(--mat-sys-inverse-primary, #D0BCFF);
+  --ng-toast-link-hover-color: var(--ng-toast-link-color);
+
+  /* text buttons, like the snack bar's action */
+  --ng-toast-action-border: 0;
+  --ng-toast-action-radius: var(--mat-sys-corner-full, 9999px);
+  --ng-toast-action-padding: 6px 12px;
+  --ng-toast-action-color: var(--mat-sys-inverse-primary, #D0BCFF);
+  --ng-toast-action-font: var(--mat-sys-label-large, 500 0.875rem / 1.25rem Roboto, sans-serif);
+  --ng-toast-action-weight: 500;
+  --ng-toast-action-hover-bg: color-mix(in srgb, currentColor 8%, transparent);
+  --ng-toast-action-primary-bg: var(--mat-sys-inverse-primary, #D0BCFF);
+  --ng-toast-action-primary-color: var(--mat-sys-primary, #6750A4);
+  --ng-toast-action-primary-hover-bg: color-mix(in srgb, var(--ng-toast-action-primary-bg) 92%, var(--ng-toast-action-primary-color));
+
+  --ng-toast-progress-color: var(--mat-sys-inverse-primary, #D0BCFF);
+  --ng-toast-progress-opacity: 1;
+  --ng-toast-progress-height: 3px;
+}
+
+/* on the error container, the icon, actions and bar take its own color */
+.overlay-container .toast-error {
+  --ng-toast-icon-color: var(--mat-sys-error, #B3261E);
+  --ng-toast-action-color: var(--mat-sys-error, #B3261E);
+  --ng-toast-progress-color: var(--mat-sys-error, #B3261E);
+  --ng-toast-link-color: var(--mat-sys-error, #B3261E);
+}
