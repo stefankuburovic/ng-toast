@@ -9,6 +9,8 @@ import {
 } from '@angular/core';
 import { ToastConfig, ToastService } from '@stefankuburovic/ng-toast';
 
+import { STACKED } from './stacked';
+
 /** One of the corners or edges a toast can go to. */
 interface Position {
   readonly value: string;
@@ -55,6 +57,7 @@ export class App {
   protected readonly closeButton = signal(true);
   protected readonly timeOut = signal(5000);
   protected readonly material = signal(false);
+  protected readonly stacked = STACKED;
   protected readonly dark = signal(this.startsDark());
 
   /** The code of the last thing fired, as it would read in an app. */
@@ -191,6 +194,15 @@ this.toast.error('You are offline');
 this.toast.error('You are offline'); // the same toast, now "[2]"
 this.toast.error('You are offline'); // "[3]"`
     );
+  }
+
+  /** `stacked` is set once, in provideToast, so switching it loads the page again. */
+  protected layout(stacked: boolean): void {
+    if (stacked === this.stacked) return;
+    const url = new URL(location.href);
+    if (stacked) url.searchParams.set('layout', 'stacked');
+    else url.searchParams.delete('layout');
+    location.assign(url);
   }
 
   protected clear(): void {

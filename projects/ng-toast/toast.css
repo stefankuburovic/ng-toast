@@ -283,6 +283,74 @@ button.toast-close-button {
   }
 }
 
+/*
+ * stacked (provideToast({ stacked: true })): the toasts of a container share one grid cell, newest
+ * in front, and the older ones peek out behind it, smaller. While the pointer or focus is on the
+ * deck it spreads into a list. ToastService sets --toast-index (0 in front), --toast-height and
+ * --toast-offset on each toast, and --toast-front-height, --toast-stack-height and --toast-count on
+ * the container. At the top the deck peeks downwards and spreads down; at the bottom, upwards.
+ */
+.toast-container.toast-stacked {
+  display: grid;
+}
+.toast-container.toast-stacked > .ng-toast {
+  grid-area: 1 / 1;
+  align-self: start;
+  margin-top: 0;
+  margin-bottom: 0;
+  z-index: calc(1000 - var(--toast-index, 0));
+  transform-origin: 50% 100%;
+  /* spread: below the ones in front of it */
+  transform: translateY(calc(var(--toast-offset, 0px) + var(--toast-index, 0) * var(--ng-toast-gap, 6px)));
+  transition: transform var(--ng-toast-stack-time, 300ms) ease, opacity var(--ng-toast-stack-time, 300ms) ease;
+}
+/* collapsed: bottom edges lined up with the front one's, then a little lower and smaller per step */
+.toast-container.toast-stacked:not(:hover):not(:focus-within) > .ng-toast {
+  max-height: var(--toast-front-height, none);
+  transform: translateY(calc(var(--toast-front-height, 0px) - min(var(--toast-height, 0px), var(--toast-front-height, 0px)) + var(--toast-index, 0) * var(--ng-toast-stack-offset, 10px)))
+    scale(calc(1 - var(--toast-index, 0) * var(--ng-toast-stack-scale, 0.05)));
+  /* 1 for the first --ng-toast-stack-visible, 0 for the rest */
+  opacity: clamp(0, var(--ng-toast-stack-visible, 3) - var(--toast-index, 0), 1);
+}
+/* the cards behind show only their edge: their text would peek out cut off */
+.toast-container.toast-stacked > .ng-toast > * {
+  transition: opacity var(--ng-toast-stack-time, 300ms) ease;
+}
+.toast-container.toast-stacked:not(:hover):not(:focus-within) > .ng-toast > * {
+  opacity: calc(1 - min(var(--toast-index, 0), 1));
+}
+.toast-container.toast-stacked[class*='toast-bottom'] > .ng-toast {
+  align-self: end;
+  transform-origin: 50% 0;
+  transform: translateY(calc(-1 * (var(--toast-offset, 0px) + var(--toast-index, 0) * var(--ng-toast-gap, 6px))));
+}
+.toast-container.toast-stacked[class*='toast-bottom']:not(:hover):not(:focus-within) > .ng-toast {
+  transform: translateY(calc(min(var(--toast-height, 0px), var(--toast-front-height, 0px)) - var(--toast-front-height, 0px) - var(--toast-index, 0) * var(--ng-toast-stack-offset, 10px)))
+    scale(calc(1 - var(--toast-index, 0) * var(--ng-toast-stack-scale, 0.05)));
+}
+/* spread, the gaps between the toasts still count as the deck, so it does not fold under the pointer */
+.toast-container.toast-stacked::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(var(--toast-stack-height, 0px) + (var(--toast-count, 1) - 1) * var(--ng-toast-gap, 6px));
+  pointer-events: none;
+}
+.toast-container.toast-stacked[class*='toast-bottom']::after {
+  top: auto;
+  bottom: 0;
+}
+.toast-container.toast-stacked:hover::after {
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-container.toast-stacked > .ng-toast {
+    transition: none;
+  }
+}
+
 /* fade, timed by the toast's easeTime (ToastComponent sets --toast-ease-time) */
 .toast-container .toast-in {
   animation: ng-toast-fade var(--toast-ease-time, 300ms) ease-in;

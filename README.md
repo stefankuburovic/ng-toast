@@ -1,7 +1,7 @@
 # @stefankuburovic/ng-toast
 
 Small toast notifications for Angular. Signals and plain timers, works zoneless, no dependencies
-beyond `@angular/core` (≥ 20.2) and `rxjs`. About 3.5 kB of JavaScript and 3.5 kB of CSS,
+beyond `@angular/core` (≥ 20.2) and `rxjs`. About 4 kB of JavaScript and 4.5 kB of CSS,
 minified and gzipped.
 
 The API follows [ngx-toastr](https://github.com/scttcper/ngx-toastr) (archived), so moving over
@@ -195,9 +195,31 @@ These are about all toasts together, so only `provideToast` takes them:
 | `preventDuplicates` | `false` | a toast with the type, title and message of one that is up hands back that one |
 | `countDuplicates` | `false` | shows how often it came: `Offline [3]` |
 | `resetTimeoutOnDuplicate` | `false` | a duplicate starts the timer of the one that is up over |
+| `stacked` | `false` | lays the toasts in a deck instead of a list, see below |
 
 Types: `toast-success`, `toast-error`, `toast-info`, `toast-warning`, and `toast-loading` (a
 spinner) for `promise`.
+
+### Stacked
+
+```ts
+provideToast({ stacked: true, maxOpened: 5 })
+```
+
+The toasts of each position lie on top of each other like a deck: the newest in front, the
+older ones peeking out behind it, smaller, the cards past the third hidden. While the pointer or
+keyboard focus is on the deck it spreads into a list, and every timer in it waits; when the
+pointer leaves, they run out their `extendedTimeOut`. At the top the deck peeks and spreads
+downwards, at the bottom upwards. In a stack the newest is always in front, whatever
+`newestOnTop` says. It is CSS, fed a few measurements by the service, and works with every
+theme.
+
+| Variable | Default | |
+| --- | --- | --- |
+| `--ng-toast-stack-offset` | `10px` | how far each card behind peeks out |
+| `--ng-toast-stack-scale` | `0.05` | how much smaller each card behind is |
+| `--ng-toast-stack-visible` | `3` | cards shown while collapsed |
+| `--ng-toast-stack-time` | `300ms` | the spread and collapse |
 
 ### Custom toast
 
