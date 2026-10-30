@@ -18,7 +18,7 @@
     <p class="lead">
       Toast notifications for Angular that stay small: signals and plain timers, zoneless, nothing
       beyond <code>&#64;angular/core</code> and <code>rxjs</code>. Promise toasts, actions, a queue
-      and a theme that follows Angular Material, in about 3.5 kB of JavaScript.
+      a deck layout and a theme that follows Angular Material, in about 4 kB of JavaScript.
     </p>
     <div class="command">
       <pre><code #install>npm install &#64;stefankuburovic/ng-toast</code></pre>
@@ -77,6 +77,22 @@
       </div>
 
       <div class="group">
+        <h2>Layout</h2>
+        <div class="segmented" role="radiogroup" aria-label="Toast layout">
+          <button type="button" role="radio" [attr.aria-checked]="!stacked" (click)="layout(false)">List</button>
+          <button type="button" role="radio" [attr.aria-checked]="stacked" (click)="layout(true)">Stacked</button>
+        </div>
+        <p class="hint">
+          @if (stacked) {
+            A deck, newest in front. Point at it to spread it out; the timers wait meanwhile.
+            Try <em>Eight at once</em>.
+          } @else {
+            One under the other. <code>stacked: true</code> lays them in a deck instead.
+          }
+        </p>
+      </div>
+
+      <div class="group">
         <h2>Theme</h2>
         <div class="segmented" role="radiogroup" aria-label="Toast theme">
           <button type="button" role="radio" [attr.aria-checked]="!material()" (click)="material.set(false)">Default</button>
@@ -102,7 +118,7 @@
       <pre><code>{{ code() }}</code></pre>
       <p class="config">
         This page runs with
-        <code>provideToast(&#123; maxOpened: 4, preventDuplicates: true, countDuplicates: true &#125;)</code>.
+        <code>provideToast(&#123; maxOpened: 4, preventDuplicates: true, countDuplicates: true{{ stacked ? ', stacked: true' : '' }} &#125;)</code>.
       </p>
     </div>
   </section>
@@ -127,6 +143,10 @@
     <article>
       <h3>Queue and duplicates</h3>
       <p><code>maxOpened</code> keeps the screen calm; the rest wait. Repeats are counted on the toast that is up.</p>
+    </article>
+    <article>
+      <h3>List or deck</h3>
+      <p><code>stacked: true</code> lays the toasts on top of each other, newest in front; pointing at the deck spreads it out.</p>
     </article>
     <article>
       <h3>Pauses when unseen</h3>

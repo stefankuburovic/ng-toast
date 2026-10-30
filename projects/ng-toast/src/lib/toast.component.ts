@@ -121,8 +121,8 @@ export class ToastComponent implements OnDestroy {
   private deadline = 0;
   /** What was left of the timer when the tab went to the background. */
   private remaining = 0;
-  /** The pointer is on the toast. */
-  private hovered = false;
+  /** The pointer is on the toast, or on its stack: the timer waits for {@link resume}. */
+  private held = false;
 
   /**
    * Starts the timer from `timeOut`, and the progress bar with it. The service calls it when the
@@ -170,16 +170,33 @@ export class ToastComponent implements OnDestroy {
     }
   }
 
-  /** The pointer is on the toast: it stays until the pointer leaves. */
-  protected stickAround(): void {
-    this.hovered = true;
+  /**
+   * Stops the timer, and the progress bar with it, until {@link resume}. The pointer on the toast
+   * does this; for a stack (`stacked`) the service does it for every toast in it at once.
+   */
+  pause(): void {
+    this.held = true;
     this.run(0);
   }
 
-  /** The pointer left: the toast goes after `extendedTimeOut`. */
-  protected delayedClose(): void {
-    this.hovered = false;
+  /** Runs the timer again after {@link pause}: the toast goes after `extendedTimeOut`. */
+  resume(): void {
+    this.held = false;
     this.run(this.options().extendedTimeOut);
+  }
+
+  /** The pointer is on the toast: it stays until the pointer leaves. In a stack, the stack decides. */
+  protected stickAround(): void {
+    if (!this.toastPackage.stacked) {
+      this.pause();
+    }
+  }
+
+  /** The pointer left: the toast goes after `extendedTimeOut`. In a stack, the stack decides. */
+  protected delayedClose(): void {
+    if (!this.toastPackage.stacked) {
+      this.resume();
+    }
   }
 
   /** Stops the running timer when the tab goes to the background, and runs it on when it is back. */
@@ -213,7 +230,7 @@ export class ToastComponent implements OnDestroy {
     clearTimeout(this.timer);
     this.deadline = 0;
     this.paused.set(false);
-    const on = ms > 0 && !this.hovered && !this.options().disableTimeOut;
+    const on = ms > 0 && !this.held && !this.options().disableTimeOut;
     this.progress.set({ ms: on ? ms : 0 });
     if (on) {
       this.arm(ms);

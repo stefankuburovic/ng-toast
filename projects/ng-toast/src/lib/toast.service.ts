@@ -124,9 +124,27 @@ export class ToastService {
   private overlay?: HTMLElement;
   /** The last id handed out. */
   private lastId = 0;
+  /** Stacked containers the pointer is on; the timers of their toasts stand still. */
+  private readonly spread = new Set<HTMLElement>();
+  /**
+   * Measures a stack again when a toast in it changes size, e.g. on an update. There is none
+   * without `stacked`, or without ResizeObserver (server rendering, jsdom); open and remove still
+   * measure.
+   */
+  private readonly resizes =
+    this.config.stacked && typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(entries => {
+          const panes = new Set(entries.map(entry => entry.target.parentElement));
+          // Next frame: changing sizes inside the callback would make the observer report a loop.
+          requestAnimationFrame(() =>
+            panes.forEach(pane => pane?.isConnected && this.restack(pane))
+          );
+        })
+      : undefined;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
+      this.resizes?.disconnect();
       [...this.toasts.values()].forEach(toast => this.drop(toast));
       this.overlay?.remove();
     });
@@ -185,6 +203,7 @@ export class ToastService {
     const toastPackage = new ToastPackage(toastId, config, message ?? '', title ?? '', type, () =>
       this.remove(toastId)
     );
+    toastPackage.stacked = this.config.stacked;
     const componentRef = createComponent(config.toastComponent ?? ToastComponent, {
       environmentInjector: this.appRef.injector,
       elementInjector: Injector.create({
@@ -355,11 +374,18 @@ export class ToastService {
     toast.queued = false;
     const { positionClass, newestOnTop } = toast.toastPackage.config();
     const pane = this.pane(positionClass);
-    pane.insertBefore(
-      toast.active.componentRef.location.nativeElement,
-      newestOnTop ? pane.firstChild : null
-    );
-    toast.active.componentRef.instance.start();
+    const element: HTMLElement = toast.active.componentRef.location.nativeElement;
+    pane.insertBefore(element, newestOnTop ? pane.firstChild : null);
+    if (this.config.stacked) {
+      this.resizes?.observe(element);
+      this.restack(pane);
+    }
+    const { instance } = toast.active.componentRef;
+    instance.start();
+    if (this.spread.has(pane)) {
+      // Came up while the pointer is on its stack: it waits with the others.
+      instance.pause();
+    }
     toast.shown.next();
     toast.shown.complete();
   }
@@ -368,11 +394,17 @@ export class ToastService {
   private drop(toast: OpenToast): void {
     this.toasts.delete(toast.active.toastId);
     const { componentRef } = toast.active;
+    const element: HTMLElement = componentRef.location.nativeElement;
+    const pane = element.parentElement;
     // Destroying the view detaches it from the application as well. Detaching it here by hand
     // would warn (NG0406) when the app is being destroyed: ApplicationRef goes first, before the
     // service's onDestroy runs.
     componentRef.destroy();
-    componentRef.location.nativeElement.remove();
+    element.remove();
+    if (this.config.stacked && pane) {
+      this.resizes?.unobserve(element);
+      this.restack(pane);
+    }
     toast.toastPackage.tapped.complete();
     toast.toastPackage.actions.complete();
     toast.shown.complete();
@@ -386,10 +418,61 @@ export class ToastService {
     if (!pane) {
       pane = this.document.createElement('div');
       pane.classList.add('toast-container', ...positionClass.split(/\s+/).filter(Boolean));
+      if (this.config.stacked) {
+        const stack = pane;
+        stack.classList.add('toast-stacked');
+        // The container itself takes no pointer, but it hears it enter and leave its toasts.
+        stack.addEventListener('mouseenter', () => this.hold(stack, true));
+        stack.addEventListener('mouseleave', () => this.hold(stack, false));
+      }
       this.overlayElement().appendChild(pane);
       this.panes.set(positionClass, pane);
     }
     return pane;
+  }
+
+  /** The toasts on screen in a container, newest first: the order of a stack, front to back. */
+  private stackOf(pane: HTMLElement): OpenToast[] {
+    return [...this.toasts.values()]
+      .filter(
+        toast => !toast.queued && toast.active.componentRef.location.nativeElement.parentElement === pane
+      )
+      .reverse();
+  }
+
+  /** The pointer came onto a stack, or left it: every toast in it waits, or runs out its time. */
+  private hold(pane: HTMLElement, on: boolean): void {
+    if (on) {
+      this.spread.add(pane);
+    } else {
+      this.spread.delete(pane);
+    }
+    this.stackOf(pane).forEach(({ active }) =>
+      on ? active.componentRef.instance.pause() : active.componentRef.instance.resume()
+    );
+  }
+
+  /**
+   * Tells a stack's toasts where they lie, for `toast.css`: `--toast-index` (0 in front),
+   * `--toast-height` and `--toast-offset` (the heights in front of it, for the spread list) on each,
+   * and the front toast's height, the sum of all and the count on the container.
+   */
+  private restack(pane: HTMLElement): void {
+    const elements = this.stackOf(pane).map(
+      ({ active }): HTMLElement => active.componentRef.location.nativeElement
+    );
+    let offset = 0;
+    elements.forEach((element, index) => {
+      // scrollHeight: the natural height, also of a toast the collapsed deck cuts to the front's.
+      const height = element.scrollHeight;
+      element.style.setProperty('--toast-index', String(index));
+      element.style.setProperty('--toast-height', `${height}px`);
+      element.style.setProperty('--toast-offset', `${offset}px`);
+      offset += height;
+    });
+    pane.style.setProperty('--toast-front-height', `${elements[0]?.scrollHeight ?? 0}px`);
+    pane.style.setProperty('--toast-stack-height', `${offset}px`);
+    pane.style.setProperty('--toast-count', String(elements.length));
   }
 
   /** The element that holds the containers, created on first use. */

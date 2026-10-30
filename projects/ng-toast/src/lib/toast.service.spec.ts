@@ -518,6 +518,66 @@ describe('ToastService', () => {
     });
   });
 
+  describe('stacked', () => {
+    const index = (toast: HTMLElement): string => toast.style.getPropertyValue('--toast-index');
+    const pane = (): HTMLElement => document.querySelector('.toast-container.toast-top-right')!;
+
+    it('marks the container and numbers its toasts newest first, whatever newestOnTop says', () => {
+      setup(provideToast({ stacked: true, newestOnTop: false }));
+      toasts.success('1');
+      toasts.success('2');
+      toasts.success('3');
+      render();
+
+      expect(pane().classList).toContain('toast-stacked');
+      expect(pane().style.getPropertyValue('--toast-count')).toBe('3');
+      expect(shown().map(t => [t.textContent?.trim(), index(t)])).toEqual([
+        ['1', '2'],
+        ['2', '1'],
+        ['3', '0']
+      ]);
+    });
+
+    it('numbers the stack again when a toast goes', () => {
+      setup(provideToast({ stacked: true }));
+      toasts.success('1');
+      const front = toasts.success('2');
+
+      toasts.remove(front.toastId);
+      expect(index(shown()[0])).toBe('0');
+      expect(pane().style.getPropertyValue('--toast-count')).toBe('1');
+    });
+
+    it('holds every timer while the pointer is on the stack, and lets them run out after', () => {
+      setup(provideToast({ stacked: true }));
+      toasts.success('1');
+      vi.advanceTimersByTime(4000);
+      toasts.success('2');
+
+      pane().dispatchEvent(new MouseEvent('mouseenter'));
+      // The pointer is on the front toast; in a stack that does not decide alone.
+      shown()[0].dispatchEvent(new MouseEvent('mouseleave'));
+      vi.advanceTimersByTime(60_000);
+      expect(shown()).toHaveLength(2);
+
+      toasts.success('3');
+      vi.advanceTimersByTime(60_000);
+      expect(shown(), 'one that comes up while the stack is held waits too').toHaveLength(3);
+
+      pane().dispatchEvent(new MouseEvent('mouseleave'));
+      vi.advanceTimersByTime(1000 + 300);
+      expect(shown()).toEqual([]);
+    });
+
+    it('leaves a container alone without stacked', () => {
+      setup();
+      toasts.success('1');
+
+      expect(pane().classList).not.toContain('toast-stacked');
+      expect(index(shown()[0])).toBe('');
+    });
+  });
+
   describe('actions', () => {
     it('runs the action, reports it on onAction and closes, without counting as a tap', () => {
       setup();

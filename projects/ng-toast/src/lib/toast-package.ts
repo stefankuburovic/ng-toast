@@ -30,6 +30,11 @@ export class ToastPackage {
   readonly toastType: WritableSignal<string>;
   /** How often the toast came again while it was up (`countDuplicates`); `0` for never. */
   readonly duplicates = signal(0);
+  /**
+   * The toast lies in a stack (`stacked`): the pointer on the stack holds every timer in it, so the
+   * toast's own hover does not.
+   */
+  stacked = false;
 
   /**
    * @param toastId What `ToastService.remove` and `clear` take; counts up from 1.

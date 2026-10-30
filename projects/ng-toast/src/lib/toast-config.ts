@@ -99,6 +99,12 @@ export interface ToastGlobalConfig extends ToastConfig {
   countDuplicates: boolean;
   /** With {@link preventDuplicates}, starts the timer of the toast that is there over. */
   resetTimeoutOnDuplicate: boolean;
+  /**
+   * Lays the toasts of each container on top of each other, newest in front and the older ones
+   * peeking out behind it, like a deck. The pointer or focus on the deck spreads it into a list and
+   * holds every timer in it. In a stack the newest is always in front, whatever `newestOnTop` says.
+   */
+  stacked: boolean;
 }
 
 /** What `ActiveToast.update` changes: the content, the type and the options that can change. */
@@ -132,7 +138,8 @@ export const DEFAULT_TOAST_CONFIG: ToastGlobalConfig = {
   autoDismiss: false,
   preventDuplicates: false,
   countDuplicates: false,
-  resetTimeoutOnDuplicate: false
+  resetTimeoutOnDuplicate: false,
+  stacked: false
 };
 
 /**
