@@ -1,0 +1,151 @@
+<header class="nav">
+  <div class="wrap">
+    <a class="back" href="../">← Stefan Kuburovic</a>
+    <nav class="nav-links" aria-label="ng-toast links">
+      <a href="https://github.com/stefankuburovic/ng-toast">GitHub</a>
+      <a href="https://www.npmjs.com/package/@stefankuburovic/ng-toast">npm</a>
+      <button class="theme-toggle" type="button" (click)="toggleDark()">
+        {{ dark() ? 'Light' : 'Dark' }}
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="hero wrap">
+    <p class="eyebrow">Open source · MIT</p>
+    <h1>ng-toast</h1>
+    <p class="lead">
+      Toast notifications for Angular that stay small: signals and plain timers, zoneless, nothing
+      beyond <code>&#64;angular/core</code> and <code>rxjs</code>. Promise toasts, actions, a queue
+      and a theme that follows Angular Material, in about 3.5 kB of JavaScript.
+    </p>
+    <div class="command">
+      <pre><code #install>npm install &#64;stefankuburovic/ng-toast</code></pre>
+      <button class="copy" type="button" #copyInstall (click)="copyText(install.textContent, copyInstall)">Copy</button>
+    </div>
+  </div>
+
+  <section class="wrap playground" aria-label="Playground">
+    <div class="controls">
+      <div class="group">
+        <h2>Types</h2>
+        <div class="buttons">
+          @for (kind of kinds; track kind) {
+            <button type="button" class="fire" [attr.data-kind]="kind" (click)="fire(kind)">{{ kind }}</button>
+          }
+        </div>
+      </div>
+
+      <div class="group">
+        <h2>Scenarios</h2>
+        <div class="scenarios">
+          <button type="button" (click)="promise(true)"><strong>Promise</strong><span>loading, then success</span></button>
+          <button type="button" (click)="promise(false)"><strong>Promise that fails</strong><span>loading, then error</span></button>
+          <button type="button" (click)="undo()"><strong>Undo action</strong><span>a button in the toast</span></button>
+          <button type="button" (click)="upload()"><strong>Live update</strong><span>one toast, changed in place</span></button>
+          <button type="button" (click)="queue()"><strong>Eight at once</strong><span>four show, four wait</span></button>
+          <button type="button" (click)="duplicates()"><strong>Same toast three times</strong><span>counted, not stacked</span></button>
+        </div>
+        <button type="button" class="link" (click)="clear()">Clear all toasts</button>
+      </div>
+
+      <div class="group">
+        <h2>Options</h2>
+        <div class="options">
+          <label>
+            Position
+            <select [value]="position()" (change)="position.set(valueOf($event))">
+              @for (p of positions; track p.value) {
+                <option [value]="p.value">{{ p.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Time out <output>{{ timeOut() / 1000 }} s</output>
+            <input type="range" min="1000" max="10000" step="500" [value]="timeOut()" (input)="timeOut.set(numberOf($event))">
+          </label>
+          <label class="check">
+            <input type="checkbox" [checked]="progressBar()" (change)="progressBar.set(!progressBar())">
+            Progress bar
+          </label>
+          <label class="check">
+            <input type="checkbox" [checked]="closeButton()" (change)="closeButton.set(!closeButton())">
+            Close button
+          </label>
+        </div>
+      </div>
+
+      <div class="group">
+        <h2>Theme</h2>
+        <div class="segmented" role="radiogroup" aria-label="Toast theme">
+          <button type="button" role="radio" [attr.aria-checked]="!material()" (click)="material.set(false)">Default</button>
+          <button type="button" role="radio" [attr.aria-checked]="material()" (click)="material.set(true)">Angular Material</button>
+        </div>
+        <p class="hint">
+          @if (material()) {
+            <code>toast-material.css</code> reads the <code>--mat-sys-*</code> variables of your Material 3
+            theme. This page has the baseline palette; switch to {{ dark() ? 'light' : 'dark' }} mode at the top to see it follow.
+          } @else {
+            Every color and size is a CSS variable: <code>--ng-toast-success-bg</code>,
+            <code>--ng-toast-radius</code>, <code>--ng-toast-font</code>, …
+          }
+        </p>
+      </div>
+    </div>
+
+    <div class="code-panel">
+      <div class="code-head">
+        <span>What that ran</span>
+        <button class="copy" type="button" (click)="copyCode()">{{ copied() ? 'Copied' : 'Copy' }}</button>
+      </div>
+      <pre><code>{{ code() }}</code></pre>
+      <p class="config">
+        This page runs with
+        <code>provideToast(&#123; maxOpened: 4, preventDuplicates: true, countDuplicates: true &#125;)</code>.
+      </p>
+    </div>
+  </section>
+
+  <section class="wrap features" aria-label="Features">
+    <article>
+      <h3>Zoneless and signals</h3>
+      <p>Plain timers and signals, no NgZone. Works with and without zone.js, on Angular 20.2 and later.</p>
+    </article>
+    <article>
+      <h3>Promise toasts</h3>
+      <p><code>toast.promise()</code> shows a spinner, then turns the same toast into a success or an error made from the result.</p>
+    </article>
+    <article>
+      <h3>Updates in place</h3>
+      <p><code>toast.update()</code> changes the text, type and options of an open toast, for uploads and long jobs.</p>
+    </article>
+    <article>
+      <h3>Actions</h3>
+      <p>Buttons such as Undo, with <code>onClick</code>, <code>onAction</code>, your own classes and an aria-label.</p>
+    </article>
+    <article>
+      <h3>Queue and duplicates</h3>
+      <p><code>maxOpened</code> keeps the screen calm; the rest wait. Repeats are counted on the toast that is up.</p>
+    </article>
+    <article>
+      <h3>Pauses when unseen</h3>
+      <p>Hover stops the timer, and so does a background tab, so nothing disappears before it was read.</p>
+    </article>
+    <article>
+      <h3>Themes by CSS variables</h3>
+      <p>No selectors to out-specify, and a ready theme for Angular Material, light and dark.</p>
+    </article>
+    <article>
+      <h3>Easy to leave ngx-toastr</h3>
+      <p>The API follows the archived ngx-toastr, so moving over is mostly a rename.</p>
+    </article>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 <a href="../">Stefan Kuburovic</a></span>
+    <a href="https://github.com/stefankuburovic/ng-toast#readme">Documentation</a>
+  </div>
+</footer>

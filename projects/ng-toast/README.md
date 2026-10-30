@@ -7,6 +7,8 @@ minified and gzipped.
 The API follows [ngx-toastr](https://github.com/scttcper/ngx-toastr) (archived), so moving over
 is mostly a rename. The stylesheet is taken from it.
 
+Live demo: https://stefankuburovic.github.io/ng-toast/
+
 ## Install
 
 ```sh
@@ -238,6 +240,7 @@ this.toast.show(html, 'Title', { toastComponent: RichToast, disableTimeOut: true
 
 ```sh
 npm test         # vitest, jsdom
+npm run demo     # the playground on localhost:4200, built from source
 npm run build    # dist/ng-toast
 npm run release  # test, build, npm publish
 ```

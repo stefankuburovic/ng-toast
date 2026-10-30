@@ -2,8 +2,10 @@
   "name": "ng-toast-workspace",
   "version": "0.0.0",
   "scripts": {
-    "build": "ng build && node scripts/strip-tslib.mjs",
+    "build": "ng build ng-toast && node scripts/strip-tslib.mjs",
     "test": "ng test --watch=false",
+    "demo": "ng serve demo",
+    "demo:build": "ng build demo --base-href /ng-toast/",
     "pack": "npm run build && cd dist/ng-toast && npm pack",
     "release": "npm test && npm run build && cd dist/ng-toast && npm publish --access public"
   },
