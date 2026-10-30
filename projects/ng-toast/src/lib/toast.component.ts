@@ -21,6 +21,9 @@ import { ToastPackage } from './toast-package';
  * `toast-out` and leaves the element in place for `easeTime`, so the fade can play; only then
  * does it ask the service to remove it.
  *
+ * Esc closes it while the focus is in it (on the × or an action), and a finger swipes it away
+ * sideways (`swipeToDismiss`).
+ *
  * Extend it for a toast with its own template (see `ToastConfig.toastComponent`). The subclass
  * inherits the host bindings, the timer, {@link close} and {@link runAction}; it must keep an
  * attribute selector. `title`, `message` and `options` are signals.
@@ -36,10 +39,17 @@ import { ToastPackage } from './toast-package';
     '[class.toast-out]': 'closing()',
     '[class.toast-paused]': 'paused()',
     '[style.--toast-ease-time]': 'options().easeTime + "ms"',
+    '[style.translate]': 'swipe() ? swipe() + "px 0" : null',
+    '[class.toast-swiping]': 'swiping()',
     'animate.enter': 'toast-in',
     '(mouseenter)': 'stickAround()',
     '(mouseleave)': 'delayedClose()',
     '(click)': 'tap()',
+    '(keydown.escape)': 'close()',
+    '(pointerdown)': 'swipeStart($event)',
+    '(pointermove)': 'swipeMove($event)',
+    '(pointerup)': 'swipeEnd($event)',
+    '(pointercancel)': 'swipeEnd($event)',
     '(document:visibilitychange)': 'visibilityChange()'
   },
   template: `
@@ -49,13 +59,14 @@ import { ToastPackage } from './toast-package';
       </button>
     }
     @if (title()) {
-      <div [class]="options().titleClass" [attr.aria-label]="title()">{{ title() }}</div>
+      <!-- The live region is the message; a toast with only a title makes the title one. -->
+      <div [class]="options().titleClass" [attr.role]="message() ? null : liveRole()">{{ title() }}</div>
     }
     @if (message()) {
       @if (options().enableHtml) {
-        <div role="alert" [class]="options().messageClass" [innerHTML]="message()"></div>
+        <div [attr.role]="liveRole()" [class]="options().messageClass" [innerHTML]="message()"></div>
       } @else {
-        <div role="alert" [class]="options().messageClass" [attr.aria-label]="message()">{{ message() }}@if (duplicates()) { [{{ duplicates() + 1 }}]}</div>
+        <div [attr.role]="liveRole()" [class]="options().messageClass">{{ message() }}@if (duplicates()) { [{{ duplicates() + 1 }}]}</div>
       }
     }
     @if (options().actions.length) {
@@ -96,6 +107,13 @@ export class ToastComponent implements OnDestroy {
   readonly message = this.toastPackage.message.asReadonly();
   /** How often it came again (`countDuplicates`); `0` for never. */
   protected readonly duplicates = this.toastPackage.duplicates.asReadonly();
+  /**
+   * How a screen reader announces the toast: an error interrupts (`alert`), anything else waits
+   * for a pause (`status`).
+   */
+  protected readonly liveRole = computed(() =>
+    this.toastPackage.toastType().split(/\s+/).includes('toast-error') ? 'alert' : 'status'
+  );
   /** The type class next to the configured ones, e.g. `toast-success ng-toast`. */
   protected readonly toastClasses = computed(
     () => `${this.toastPackage.toastType()} ${this.options().toastClass}`
@@ -113,6 +131,10 @@ export class ToastComponent implements OnDestroy {
   protected readonly paused = signal(false);
   /** The current run of the timer, for the progress bar; `ms` is `0` while none runs. */
   protected readonly progress = signal({ ms: 0 });
+  /** How far a finger has dragged the toast sideways, in px; `0` while it is not swiped. */
+  protected readonly swipe = signal(0);
+  /** A finger is dragging the toast: no transition, so it follows the finger. */
+  protected readonly swiping = signal(false);
 
   private readonly document = inject(DOCUMENT);
   /** The pending close: the timeout, the extended timeout or the end of the fade. */
@@ -123,6 +145,10 @@ export class ToastComponent implements OnDestroy {
   private remaining = 0;
   /** The pointer is on the toast, or on its stack: the timer waits for {@link resume}. */
   private held = false;
+  /** Where the finger that may swipe the toast went down. */
+  private swipeFrom?: { readonly pointerId: number; readonly x: number };
+  /** The last touch swiped the toast, so the click that may follow it is no tap. */
+  private swiped = false;
 
   /**
    * Starts the timer from `timeOut`, and the progress bar with it. The service calls it when the
@@ -140,6 +166,11 @@ export class ToastComponent implements OnDestroy {
     }
     clearTimeout(this.timer);
     this.closed.set(true);
+    if (this.options().easeTime <= 0) {
+      // No fade to wait for, as in tests (provideToastTesting): gone at once.
+      this.toastPackage.remove();
+      return;
+    }
     this.timer = setTimeout(() => this.toastPackage.remove(), this.options().easeTime);
   }
 
@@ -161,7 +192,8 @@ export class ToastComponent implements OnDestroy {
 
   /** A click on the toast: reported on `onTap`, and closes it when `tapToDismiss` is set. */
   protected tap(): void {
-    if (this.closed()) {
+    if (this.closed() || this.swiped) {
+      this.swiped = false;
       return;
     }
     this.toastPackage.tapped.next();
@@ -195,6 +227,60 @@ export class ToastComponent implements OnDestroy {
   /** The pointer left: the toast goes after `extendedTimeOut`. In a stack, the stack decides. */
   protected delayedClose(): void {
     if (!this.toastPackage.stacked) {
+      this.resume();
+    }
+  }
+
+  /** A finger, or a pen, went down on the toast: it may become a swipe. A mouse never does. */
+  protected swipeStart(event: PointerEvent): void {
+    this.swiped = false;
+    if (event.pointerType !== 'mouse' && this.options().swipeToDismiss && !this.closed()) {
+      this.swipeFrom = { pointerId: event.pointerId, x: event.clientX };
+    }
+  }
+
+  /** The finger moved: past a few pixels of wobble it drags the toast along, timer held. */
+  protected swipeMove(event: PointerEvent): void {
+    if (this.swipeFrom?.pointerId !== event.pointerId) {
+      return;
+    }
+    const distance = event.clientX - this.swipeFrom.x;
+    if (!this.swiping()) {
+      if (Math.abs(distance) < 10) {
+        return;
+      }
+      this.swiping.set(true);
+      try {
+        // Keeps the moves coming when the finger leaves the toast; a nicety, not a need.
+        (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+      } catch {
+        // The browser no longer counts that pointer as active: swipe on without the capture.
+      }
+      this.pause();
+    }
+    this.swipe.set(distance);
+  }
+
+  /**
+   * The finger let go: far enough (a third of the toast, at most 80px) and the toast flies out
+   * that way and closes; not far enough, or the touch was cancelled, and it snaps back.
+   */
+  protected swipeEnd(event: PointerEvent): void {
+    if (this.swipeFrom?.pointerId !== event.pointerId) {
+      return;
+    }
+    this.swipeFrom = undefined;
+    if (!this.swiping()) {
+      return;
+    }
+    this.swiping.set(false);
+    this.swiped = true;
+    const width = (event.currentTarget as HTMLElement).offsetWidth;
+    if (event.type === 'pointerup' && Math.abs(this.swipe()) > Math.min(80, width / 3)) {
+      this.swipe.set(Math.sign(this.swipe()) * width);
+      this.close();
+    } else {
+      this.swipe.set(0);
       this.resume();
     }
   }

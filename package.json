@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "scripts": {
     "build": "ng build ng-toast && node scripts/strip-tslib.mjs",
+    "size": "node scripts/size.mjs",
     "test": "ng test --watch=false",
     "demo": "ng serve demo",
     "demo:build": "ng build demo --base-href /ng-toast/",
@@ -19,6 +20,7 @@
     "@angular/compiler-cli": "^22.0.0",
     "@angular/core": "^22.0.0",
     "@angular/platform-browser": "^22.0.0",
+    "esbuild": "0.28.2",
     "jsdom": "^30.0.0",
     "ng-packagr": "^22.2.0",
     "prettier": "^3.8.1",
