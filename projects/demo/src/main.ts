@@ -1,6 +1,6 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { provideToast } from '@stefankuburovic/ng-toast';
+import { provideToast } from 'ng-signal-toast';
 
 import { App } from './app';
 

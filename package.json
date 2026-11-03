@@ -7,7 +7,7 @@
     "test": "ng test --watch=false",
     "demo": "ng serve demo",
     "demo:build": "ng build demo --base-href /ng-toast/",
-    "pack": "npm run build && cd dist/ng-toast && npm pack",
+    "pack": "npm run build && cd dist/ng-toast && npm pack --pack-destination ../..",
     "release": "npm test && npm run build && cd dist/ng-toast && npm publish --access public"
   },
   "private": true,

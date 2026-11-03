@@ -1,4 +1,6 @@
-# @stefankuburovic/ng-toast
+# ng-signal-toast
+
+> Formerly published as `@stefankuburovic/ng-toast`. From 2.2.1 on it is published as `ng-signal-toast`, with the same code and API: install `ng-signal-toast` and change the import path.
 
 Small toast notifications for Angular. Signals and plain timers, works zoneless, no dependencies
 beyond `@angular/core` (≥ 20.2) and `rxjs`. About 4.6 kB of JavaScript and 2.7 kB of CSS as
@@ -12,19 +14,19 @@ Live demo: https://stefankuburovic.github.io/ng-toast/
 ## Install
 
 ```sh
-npm install @stefankuburovic/ng-toast
+npm install ng-signal-toast
 ```
 
 Add the stylesheet, e.g. in `angular.json` / `project.json`:
 
 ```json
-"styles": ["node_modules/@stefankuburovic/ng-toast/toast.css", "src/styles.scss"]
+"styles": ["node_modules/ng-signal-toast/toast.css", "src/styles.scss"]
 ```
 
 ## Use
 
 ```ts
-import { ToastService } from '@stefankuburovic/ng-toast';
+import { ToastService } from 'ng-signal-toast';
 
 export class SaveButton {
   private readonly toast = inject(ToastService);
@@ -138,8 +140,8 @@ like `MatSnackBar` and follow the app's palette, shape, typography and light or 
 
 ```json
 "styles": [
-  "node_modules/@stefankuburovic/ng-toast/toast.css",
-  "node_modules/@stefankuburovic/ng-toast/toast-material.css",
+  "node_modules/ng-signal-toast/toast.css",
+  "node_modules/ng-signal-toast/toast-material.css",
   "src/styles.scss"
 ]
 ```

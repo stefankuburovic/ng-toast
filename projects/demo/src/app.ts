@@ -7,7 +7,7 @@ import {
   inject,
   signal
 } from '@angular/core';
-import { ToastConfig, ToastService } from '@stefankuburovic/ng-toast';
+import { ToastConfig, ToastService } from 'ng-signal-toast';
 
 import { STACKED } from './stacked';
 

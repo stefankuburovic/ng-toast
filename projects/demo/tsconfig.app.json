@@ -4,7 +4,7 @@
   "compilerOptions": {
     "outDir": "../../out-tsc/demo",
     "paths": {
-      "@stefankuburovic/ng-toast": ["../ng-toast/src/public-api.ts"]
+      "ng-signal-toast": ["../ng-toast/src/public-api.ts"]
     }
   },
   "files": ["src/main.ts"]

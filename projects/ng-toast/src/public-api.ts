@@ -1,5 +1,5 @@
 /*
- * Public API of @stefankuburovic/ng-toast
+ * Public API of ng-signal-toast
  */
 export * from './lib/toast-config';
 export * from './lib/toast-package';

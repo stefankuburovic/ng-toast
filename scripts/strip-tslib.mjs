@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 
 const path = 'dist/ng-toast/package.json';
 const manifest = JSON.parse(readFileSync(path, 'utf8'));
-if (readFileSync('dist/ng-toast/fesm2022/stefankuburovic-ng-toast.mjs', 'utf8').includes('tslib')) {
+if (readFileSync('dist/ng-toast/fesm2022/ng-signal-toast.mjs', 'utf8').includes('tslib')) {
   throw new Error('the bundle imports tslib; keep the dependency');
 }
 delete manifest.dependencies?.tslib;
