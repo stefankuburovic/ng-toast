@@ -170,6 +170,134 @@ describe('ToastService', () => {
     expect(shown()).toEqual([]);
   });
 
+  it('reads closeLabel to a screen reader on the ×', () => {
+    setup();
+    toasts.success('x', '', { closeButton: 'icon', closeLabel: 'Schließen' });
+    render();
+
+    const button = shown()[0].querySelector('.toast-close-button');
+    expect(button?.getAttribute('aria-label')).toBe('Schließen');
+    expect(shown()[0].querySelector('.toast-close-action')).toBeNull();
+  });
+
+  it("draws a 'text' close button next to the actions, which closes without counting as a tap", () => {
+    setup();
+    const toast = toasts.info('x', '', {
+      closeButton: 'text',
+      closeLabel: 'Close',
+      actions: [{ label: 'Undo' }],
+      tapToDismiss: false
+    });
+    const tapped = vi.fn();
+    toast.onTap.subscribe(tapped);
+    render();
+
+    const element = shown()[0];
+    expect(element.querySelector('.toast-close-button'), 'no ×').toBeNull();
+    const buttons = Array.from(element.querySelectorAll('.toast-actions button'));
+    expect(buttons.map(b => b.textContent)).toEqual(['Undo', 'Close']);
+
+    (buttons[1] as HTMLElement).click();
+    vi.advanceTimersByTime(300);
+    expect(tapped).not.toHaveBeenCalled();
+    expect(shown()).toEqual([]);
+  });
+
+  describe('hideAnimation', () => {
+    it('marks a closing toast with its hideAnimation, fade by default, and nothing before', () => {
+      setup();
+      toasts.success('a', '', { disableTimeOut: true });
+      toasts.success('b', '', { disableTimeOut: true, hideAnimation: 'crash' });
+      render();
+      const [crash, fade] = shown();
+      expect(fade.hasAttribute('data-toast-hide')).toBe(false);
+
+      toasts.clear();
+      render();
+      expect(fade.getAttribute('data-toast-hide')).toBe('fade');
+      expect(crash.getAttribute('data-toast-hide')).toBe('crash');
+      expect(crash.classList).toContain('toast-out');
+
+      vi.advanceTimersByTime(300);
+      expect(shown()).toEqual([]);
+    });
+
+    it('takes a name of its own, and can be set for all in provideToast', () => {
+      setup(provideToast({ hideAnimation: 'slide-right' }));
+      toasts.info('a', '', { disableTimeOut: true });
+      toasts.info('b', '', { disableTimeOut: true, hideAnimation: 'wobble' });
+      render();
+      const [own, global] = shown();
+
+      toasts.clear();
+      render();
+      expect(global.getAttribute('data-toast-hide')).toBe('slide-right');
+      expect(own.getAttribute('data-toast-hide')).toBe('wobble');
+    });
+  });
+
+  describe('clearAllButton', () => {
+    /** The "Clear all" button of a container, if it has one. */
+    const clearAll = (position = 'toast-top-right'): HTMLButtonElement | null =>
+      document.querySelector(`.toast-container.${position} > button.toast-clear-all`);
+
+    it('is not there without the option', () => {
+      setup();
+      toasts.info('1');
+      toasts.info('2');
+      render();
+
+      expect(clearAll()).toBeNull();
+    });
+
+    it('shows from two toasts on, last in the container, and clears all of them, waiting ones too', () => {
+      setup(provideToast({ clearAllButton: true, clearAllLabel: 'Alle schließen', maxOpened: 2 }));
+      toasts.info('1', '', { disableTimeOut: true });
+      render();
+      const button = clearAll();
+      expect(button?.textContent).toBe('Alle schließen');
+      expect(button?.hidden, 'one toast').toBe(true);
+
+      toasts.info('2', '', { disableTimeOut: true });
+      toasts.info('3', '', { disableTimeOut: true });
+      render();
+      expect(button?.hidden, 'two on screen, one waiting').toBe(false);
+      expect(button?.parentElement?.lastElementChild).toBe(button);
+
+      button?.click();
+      render();
+      expect(button?.hidden, 'hidden as soon as they start to go').toBe(true);
+      vi.advanceTimersByTime(300);
+      expect(shown()).toEqual([]);
+      expect(toasts.toasts()).toEqual([]);
+    });
+
+    it('counts per container and from the number it is given', () => {
+      setup(provideToast({ clearAllButton: 3 }));
+      toasts.info('1');
+      toasts.info('2');
+      toasts.info('3', '', { positionClass: 'toast-bottom-left' });
+      render();
+      expect(clearAll()?.hidden).toBe(true);
+      expect(clearAll('toast-bottom-left')?.hidden).toBe(true);
+
+      toasts.info('4');
+      render();
+      expect(clearAll()?.hidden).toBe(false);
+      expect(clearAll('toast-bottom-left')?.hidden).toBe(true);
+    });
+
+    it('keeps newestOnTop off putting toasts before the button', () => {
+      setup(provideToast({ clearAllButton: true, newestOnTop: false }));
+      toasts.info('1');
+      toasts.info('2');
+      render();
+
+      expect(messages()).toEqual(['1', '2']);
+      expect(clearAll()?.previousElementSibling).toBe(shown()[1]);
+    });
+  });
+
   it('remove takes a toast out at once and answers false for one that is not open', async () => {
     setup();
     const toast = toasts.success('x');
@@ -646,6 +774,21 @@ describe('ToastService', () => {
       vi.advanceTimersByTime(300);
       expect(tapped).not.toHaveBeenCalled();
       expect(shown()).toEqual([]);
+    });
+
+    it('fades a swiped toast out where the finger left it, whatever hideAnimation says', () => {
+      setup();
+      toasts.success('x', '', { disableTimeOut: true, hideAnimation: 'slide-left' });
+      render();
+      const element = wide(shown()[0]);
+
+      element.dispatchEvent(pointer('pointerdown', 100));
+      element.dispatchEvent(pointer('pointermove', 150));
+      element.dispatchEvent(pointer('pointermove', 250));
+      element.dispatchEvent(pointer('pointerup', 250));
+      render();
+      expect(element.getAttribute('data-toast-hide')).toBe('fade');
+      expect(element.style.translate).toMatch(/^300px/);
     });
 
     it('snaps back from a short swipe and holds the timer while the finger is on it', () => {

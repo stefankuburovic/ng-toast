@@ -8,7 +8,7 @@ import { transformSync } from 'esbuild';
 /** [file in dist/ng-toast, loader, budget in bytes] */
 const budgets = [
   ['fesm2022/ng-signal-toast.mjs', 'js', 5000],
-  ['toast.css', 'css', 2900],
+  ['toast.css', 'css', 3500],
   ['toast-material.css', 'css', 700]
 ];
 

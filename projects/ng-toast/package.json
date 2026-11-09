@@ -1,6 +1,6 @@
 {
   "name": "ng-signal-toast",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Small toast notifications for Angular: signals, zoneless, promise toasts, actions, progress bar, queue. No dependencies beyond @angular/core and rxjs.",
   "keywords": [
     "angular",

@@ -20,6 +20,39 @@ export interface ToastAction {
 }
 
 /**
+ * How a toast leaves the screen, as `toast.css` draws it:
+ *
+ * - `fade`: fades out where it is (the default).
+ * - `fade-up`, `fade-down`, `fade-left`, `fade-right`: fades out while drifting a little that way.
+ * - `slide-up`, `slide-down`, `slide-left`, `slide-right`: slides off that way, fading at the end.
+ * - `zoom`: shrinks as it fades.
+ * - `flip`: folds away about its horizontal axis.
+ * - `crash`: jolts, then falls off the bottom of the screen, tumbling.
+ * - `destroy`: shakes, flares up and bursts into a blur.
+ *
+ * Any other name is yours: `toast.css` leaves it to a rule of your own, e.g.
+ * `.toast-out[data-toast-hide='wobble'] { animation-name: my-wobble }`. Each plays for
+ * `easeTime`; `crash` and `destroy` read best at 600 or so. With reduced motion asked for, every
+ * one is a plain fade.
+ */
+export type ToastHideAnimation =
+  | 'fade'
+  | 'fade-up'
+  | 'fade-down'
+  | 'fade-left'
+  | 'fade-right'
+  | 'slide-up'
+  | 'slide-down'
+  | 'slide-left'
+  | 'slide-right'
+  | 'zoom'
+  | 'flip'
+  | 'crash'
+  | 'destroy'
+  // A name of your own; `& {}` keeps an editor suggesting the ones above.
+  | (string & {});
+
+/**
  * Everything a toast can be told, globally through {@link provideToast} or per call through the
  * `override` argument of every `ToastService` method.
  */
@@ -38,8 +71,13 @@ export interface ToastConfig {
    * could see it. It runs on from where it stopped when the tab comes back.
    */
   pauseWhenHidden: boolean;
-  /** Draws a × that closes the toast. */
-  closeButton: boolean;
+  /**
+   * A button that closes the toast: `true` or `'icon'` draws a × in the corner, `'text'` a button
+   * with {@link closeLabel} next to the actions. `false` for none.
+   */
+  closeButton: boolean | 'icon' | 'text';
+  /** The text of a `'text'` close button, and what a screen reader reads for the ×. */
+  closeLabel: string;
   /** Draws a bar along the bottom that runs down with the timer. */
   progressBar: boolean;
   /** `decreasing` empties the bar, `increasing` fills it. */
@@ -71,6 +109,11 @@ export interface ToastConfig {
   messageClass: string;
   /** Milliseconds of the fade-in and fade-out; `toast.css` reads it as `--toast-ease-time`. */
   easeTime: number;
+  /**
+   * How the toast leaves: a fade, a slide or drift in a direction, a zoom, a flip, a crash or a
+   * burst; see {@link ToastHideAnimation}. A toast swiped away just fades, where the finger left it.
+   */
+  hideAnimation: ToastHideAnimation;
   /**
    * The component a toast is drawn with. A custom one extends {@link ToastComponent} and keeps an
    * attribute selector: the host is created from the selector, and only an attribute selector
@@ -107,6 +150,15 @@ export interface ToastGlobalConfig extends ToastConfig {
    * holds every timer in it. In a stack the newest is always in front, whatever `newestOnTop` says.
    */
   stacked: boolean;
+  /**
+   * A "Clear all" button by each container, below the toasts at the top of the screen and above
+   * them at the bottom, that closes every toast and drops the waiting ones (`clear()`). `true`
+   * shows it from two toasts in the container on, a number from that many on; `false` for none.
+   * In a stack it shows while the deck is spread.
+   */
+  clearAllButton: boolean | number;
+  /** The text of the {@link clearAllButton}. */
+  clearAllLabel: string;
 }
 
 /** What `ActiveToast.update` changes: the content, the type and the options that can change. */
@@ -125,6 +177,7 @@ export const DEFAULT_TOAST_CONFIG: ToastGlobalConfig = {
   disableTimeOut: false,
   pauseWhenHidden: true,
   closeButton: false,
+  closeLabel: 'Close',
   progressBar: false,
   progressAnimation: 'decreasing',
   actions: [],
@@ -137,12 +190,15 @@ export const DEFAULT_TOAST_CONFIG: ToastGlobalConfig = {
   titleClass: 'toast-title',
   messageClass: 'toast-message',
   easeTime: 300,
+  hideAnimation: 'fade',
   maxOpened: 0,
   autoDismiss: false,
   preventDuplicates: false,
   countDuplicates: false,
   resetTimeoutOnDuplicate: false,
-  stacked: false
+  stacked: false,
+  clearAllButton: false,
+  clearAllLabel: 'Clear all'
 };
 
 /**

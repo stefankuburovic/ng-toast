@@ -50,6 +50,8 @@
   --ng-toast-action-primary-color: var(--mat-sys-primary, #6750A4);
   --ng-toast-action-primary-hover-bg: color-mix(in srgb, var(--ng-toast-action-primary-bg) 92%, var(--ng-toast-action-primary-color));
 
+  --ng-toast-clear-all-font: var(--mat-sys-label-large, 500 0.875rem / 1.25rem Roboto, sans-serif);
+
   --ng-toast-progress-color: var(--mat-sys-inverse-primary, #D0BCFF);
   --ng-toast-progress-opacity: 1;
   --ng-toast-progress-height: 3px;

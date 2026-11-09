@@ -7,6 +7,7 @@ import {
   Injector,
   Signal,
   createComponent,
+  effect,
   inject,
   signal
 } from '@angular/core';
@@ -100,6 +101,9 @@ interface OpenToast {
  * Every toast first goes into line and comes on screen as soon as `maxOpened` leaves room, which
  * without a limit is at once. A toast that is closing does not count against the limit.
  *
+ * With `clearAllButton`, each container also holds a `button.toast-clear-all`, last, shown while
+ * the container holds enough toasts.
+ *
  * When the app or the test bed is destroyed, so are its toasts and the container: a container
  * left behind would collect the next test's toasts next to the dead ones.
  */
@@ -128,6 +132,8 @@ export class ToastService {
   readonly toasts: Signal<readonly ActiveToast[]> = this.list.asReadonly();
   /** One container per `positionClass`. */
   private readonly panes = new Map<string, HTMLElement>();
+  /** The "Clear all" button of each container, with `clearAllButton`. */
+  private readonly clearAlls = new Map<HTMLElement, HTMLButtonElement>();
   /** Holds the containers; created with the first toast. */
   private overlay?: HTMLElement;
   /** The last id handed out. */
@@ -151,6 +157,22 @@ export class ToastService {
       : undefined;
 
   constructor() {
+    const { clearAllButton } = this.config;
+    if (clearAllButton) {
+      const min = clearAllButton === true ? 2 : clearAllButton;
+      // Shows each container's button while it holds enough toasts that are not on their way out:
+      // a toast that starts to close, by its timer or a click, takes its count away at once.
+      effect(() => {
+        const counts = new Map<Element | null, number>();
+        for (const { toastId, componentRef } of this.list()) {
+          if (!this.byId.get(toastId)?.queued && !componentRef.instance.closing()) {
+            const pane = componentRef.location.nativeElement.parentElement;
+            counts.set(pane, (counts.get(pane) ?? 0) + 1);
+          }
+        }
+        this.clearAlls.forEach((button, pane) => (button.hidden = (counts.get(pane) ?? 0) < min));
+      });
+    }
     inject(DestroyRef).onDestroy(() => {
       this.resizes?.disconnect();
       [...this.byId.values()].forEach(toast => this.drop(toast));
@@ -307,8 +329,8 @@ export class ToastService {
   }
 
   /**
-   * Fades out one toast, or every open one when no id is given. Toasts still waiting for room go
-   * at once, without coming up.
+   * Closes one toast, or every open one when no id is given, each with its `hideAnimation`. Toasts
+   * still waiting for room go at once, without coming up. The `clearAllButton` calls it.
    */
   clear(toastId?: number): void {
     const toasts = [...this.byId.values()].filter(
@@ -384,7 +406,8 @@ export class ToastService {
     const { positionClass, newestOnTop } = toast.toastPackage.config();
     const pane = this.pane(positionClass);
     const element: HTMLElement = toast.active.componentRef.location.nativeElement;
-    pane.insertBefore(element, newestOnTop ? pane.firstChild : null);
+    // The "Clear all" button stays last, so it comes after the toasts for the keyboard as well.
+    pane.insertBefore(element, newestOnTop ? pane.firstChild : (this.clearAlls.get(pane) ?? null));
     if (this.config.stacked) {
       this.resizes?.observe(element);
       this.restack(pane);
@@ -439,6 +462,16 @@ export class ToastService {
         // The container itself takes no pointer, but it hears it enter and leave its toasts.
         stack.addEventListener('mouseenter', () => this.hold(stack, true));
         stack.addEventListener('mouseleave', () => this.hold(stack, false));
+      }
+      if (this.config.clearAllButton) {
+        const button = this.document.createElement('button');
+        button.type = 'button';
+        button.className = 'toast-clear-all';
+        button.textContent = this.config.clearAllLabel;
+        button.hidden = true;
+        button.addEventListener('click', () => this.clear());
+        pane.appendChild(button);
+        this.clearAlls.set(pane, button);
       }
       this.overlayElement().appendChild(pane);
       this.panes.set(positionClass, pane);

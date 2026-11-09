@@ -7,7 +7,7 @@ import {
   inject,
   signal
 } from '@angular/core';
-import { ToastConfig, ToastService } from 'ng-signal-toast';
+import { ToastConfig, ToastHideAnimation, ToastService } from 'ng-signal-toast';
 
 import { STACKED } from './stacked';
 
@@ -25,6 +25,26 @@ const POSITIONS: readonly Position[] = [
   { value: 'toast-bottom-center', label: 'Bottom center' },
   { value: 'toast-bottom-left', label: 'Bottom left' }
 ];
+
+/** The ways out `toast.css` draws, for the select. */
+const HIDE_ANIMATIONS: readonly ToastHideAnimation[] = [
+  'fade',
+  'fade-up',
+  'fade-down',
+  'fade-left',
+  'fade-right',
+  'slide-up',
+  'slide-down',
+  'slide-left',
+  'slide-right',
+  'zoom',
+  'flip',
+  'crash',
+  'destroy'
+];
+
+/** What the close button select offers: none, the ×, or a text button. */
+type CloseButton = ToastConfig['closeButton'];
 
 /** What `success`, `error`, … are called with from the type buttons. */
 const SAMPLES = {
@@ -51,11 +71,14 @@ export class App {
 
   protected readonly positions = POSITIONS;
   protected readonly kinds = Object.keys(SAMPLES) as ToastKind[];
+  protected readonly hideAnimations = HIDE_ANIMATIONS;
 
   protected readonly position = signal('toast-top-right');
   protected readonly progressBar = signal(true);
-  protected readonly closeButton = signal(true);
+  protected readonly closeButton = signal<CloseButton>(true);
   protected readonly timeOut = signal(5000);
+  protected readonly hideAnimation = signal<ToastHideAnimation>('fade');
+  protected readonly easeTime = signal(300);
   protected readonly material = signal(false);
   protected readonly stacked = STACKED;
   protected readonly dark = signal(this.startsDark());
@@ -71,8 +94,10 @@ export class App {
     const override: Partial<ToastConfig> = {};
     if (this.position() !== 'toast-top-right') override.positionClass = this.position();
     if (this.progressBar()) override.progressBar = true;
-    if (this.closeButton()) override.closeButton = true;
+    if (this.closeButton()) override.closeButton = this.closeButton();
     if (this.timeOut() !== 5000) override.timeOut = this.timeOut();
+    if (this.hideAnimation() !== 'fade') override.hideAnimation = this.hideAnimation();
+    if (this.easeTime() !== 300) override.easeTime = this.easeTime();
     return override;
   });
 
@@ -230,6 +255,20 @@ this.toast.error('You are offline'); // "[3]"`
 
   protected valueOf(event: Event): string {
     return (event.target as HTMLSelectElement).value;
+  }
+
+  /** The close button select: `''` is none, `icon` the ×, `text` a "Close" button. */
+  protected closeButtonOf(event: Event): CloseButton {
+    const value = this.valueOf(event);
+    return value === 'text' ? 'text' : value === 'icon';
+  }
+
+  /** `crash` and `destroy` need time to play out; the slider follows, and can be moved back. */
+  protected pickHideAnimation(animation: string): void {
+    this.hideAnimation.set(animation);
+    if ((animation === 'crash' || animation === 'destroy') && this.easeTime() < 600) {
+      this.easeTime.set(700);
+    }
   }
 
   /** Remembers the visitor's choice, as the portfolio page does. */
