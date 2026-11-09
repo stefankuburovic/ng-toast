@@ -48,6 +48,7 @@
           <button type="button" (click)="duplicates()"><strong>Same toast three times</strong><span>counted, not stacked</span></button>
         </div>
         <button type="button" class="link" (click)="clear()">Clear all toasts</button>
+        <p class="hint">With two or more up, <code>clearAllButton</code> puts a <em>Clear all</em> button by the toasts as well.</p>
       </div>
 
       <div class="group">
@@ -69,9 +70,25 @@
             <input type="checkbox" [checked]="progressBar()" (change)="progressBar.set(!progressBar())">
             Progress bar
           </label>
-          <label class="check">
-            <input type="checkbox" [checked]="closeButton()" (change)="closeButton.set(!closeButton())">
+          <label>
             Close button
+            <select [value]="closeButton() === 'text' ? 'text' : closeButton() ? 'icon' : ''" (change)="closeButton.set(closeButtonOf($event))">
+              <option value="icon">× in the corner</option>
+              <option value="text">"Close" button</option>
+              <option value="">None (timer, tap or swipe)</option>
+            </select>
+          </label>
+          <label>
+            Exit animation
+            <select [value]="hideAnimation()" (change)="pickHideAnimation(valueOf($event))">
+              @for (a of hideAnimations; track a) {
+                <option [value]="a">{{ a }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Animation time <output>{{ easeTime() }} ms</output>
+            <input type="range" min="100" max="1500" step="50" [value]="easeTime()" (input)="easeTime.set(numberOf($event))">
           </label>
         </div>
       </div>
@@ -118,7 +135,7 @@
       <pre><code>{{ code() }}</code></pre>
       <p class="config">
         This page runs with
-        <code>provideToast(&#123; maxOpened: 4, preventDuplicates: true, countDuplicates: true{{ stacked ? ', stacked: true' : '' }} &#125;)</code>.
+        <code>provideToast(&#123; maxOpened: 4, preventDuplicates: true, countDuplicates: true, clearAllButton: true{{ stacked ? ', stacked: true' : '' }} &#125;)</code>.
       </p>
     </div>
   </section>

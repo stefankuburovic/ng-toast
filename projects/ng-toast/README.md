@@ -3,7 +3,7 @@
 > Formerly published as `@stefankuburovic/ng-toast`. From 2.2.1 on it is published as `ng-signal-toast`, with the same code and API: install `ng-signal-toast` and change the import path.
 
 Small toast notifications for Angular. Signals and plain timers, works zoneless, no dependencies
-beyond `@angular/core` (≥ 20.2) and `rxjs`. About 4.6 kB of JavaScript and 2.7 kB of CSS as
+beyond `@angular/core` (≥ 20.2) and `rxjs`. About 5 kB of JavaScript and 3.4 kB of CSS as
 your production build ships them (minified, gzipped); CI keeps it under a budget.
 
 The API follows [ngx-toastr](https://github.com/scttcper/ngx-toastr) (archived), so moving over
@@ -157,7 +157,7 @@ errors on the error container. Anything it sets can still be overridden with the
 | `success / error / info / warning(message?, title?, override?)` | Opens a toast, returns an `ActiveToast`. |
 | `show(message?, title?, override?, type?)` | Same with any type class. |
 | `promise(promise, { loading, success, error }, override?)` | A loading toast that turns into success or error. |
-| `clear(toastId?)` | Fades out one toast, or all; waiting ones go at once. |
+| `clear(toastId?)` | Closes one toast, or all, each with its `hideAnimation`; waiting ones go at once. |
 | `remove(toastId)` | Takes a toast out at once. `false` when it is not open. |
 | `toasts()` | A signal of the open and waiting toasts, oldest first, e.g. for a count on a bell icon. |
 
@@ -175,7 +175,8 @@ Every option can be set app-wide with `provideToast` and per call through `overr
 | `extendedTimeOut` | `1000` | ms after the pointer leaves it (hover pauses it) |
 | `disableTimeOut` | `false` | keep it until closed |
 | `pauseWhenHidden` | `true` | the timer stands still while the tab is in the background |
-| `closeButton` | `false` | draw a × |
+| `closeButton` | `false` | `true` or `'icon'`: a × in the corner; `'text'`: a button with `closeLabel` next to the actions |
+| `closeLabel` | `Close` | the text of a `'text'` close button, and the screen reader's name for the × |
 | `progressBar` | `false` | a bar that runs down with the timer |
 | `progressAnimation` | `decreasing` | or `increasing` |
 | `actions` | `[]` | buttons, see above |
@@ -187,7 +188,8 @@ Every option can be set app-wide with `provideToast` and per call through `overr
 | `toastClass` | `ng-toast` | |
 | `titleClass` | `toast-title` | |
 | `messageClass` | `toast-message` | |
-| `easeTime` | `300` | ms of the fade |
+| `easeTime` | `300` | ms of the fade in and of the way out |
+| `hideAnimation` | `fade` | how it leaves, see below |
 | `toastComponent` | `ToastComponent` | see below |
 
 These are about all toasts together, so only `provideToast` takes them:
@@ -200,9 +202,51 @@ These are about all toasts together, so only `provideToast` takes them:
 | `countDuplicates` | `false` | shows how often it came: `Offline [3]` |
 | `resetTimeoutOnDuplicate` | `false` | a duplicate starts the timer of the one that is up over |
 | `stacked` | `false` | lays the toasts in a deck instead of a list, see below |
+| `clearAllButton` | `false` | a *Clear all* button by the toasts: `true` from two toasts in a position on, a number from that many |
+| `clearAllLabel` | `Clear all` | its text |
 
 Types: `toast-success`, `toast-error`, `toast-info`, `toast-warning`, and `toast-loading` (a
 spinner) for `promise`.
+
+### Ways out
+
+`hideAnimation` sets how a toast leaves, by its timer, a click, the × or `clear()`:
+
+| Value | |
+| --- | --- |
+| `fade` | fades where it is |
+| `fade-up`, `fade-down`, `fade-left`, `fade-right` | fades while drifting a little that way |
+| `slide-up`, `slide-down`, `slide-left`, `slide-right` | slides off that way, fading at the end |
+| `zoom` | shrinks as it fades |
+| `flip` | folds away about its horizontal axis |
+| `crash` | jolts, then falls off the bottom of the screen, tumbling |
+| `destroy` | shakes, flares up and bursts into a blur |
+
+```ts
+provideToast({ hideAnimation: 'slide-right' });
+this.toast.error('Payment failed', '', { hideAnimation: 'crash', easeTime: 700 });
+```
+
+Each plays for `easeTime`; `crash` and `destroy` read best at 600 or so. A swiped toast just fades
+where the finger left it, and with `prefers-reduced-motion` every way out is a fade. Any other
+name is yours to draw: the closing toast carries it as `data-toast-hide`.
+
+```css
+.toast-out[data-toast-hide='wobble'] { animation-name: my-wobble; }
+```
+
+### Clear all
+
+```ts
+provideToast({ clearAllButton: true, clearAllLabel: 'Alle schließen' });
+```
+
+Each position gets a `button.toast-clear-all`, below the toasts at the top of the screen and above
+them at the bottom, that calls `clear()`: every toast goes its own way out, and the waiting ones go
+with them. It shows from two toasts on (or the number given), hides as soon as they start to
+leave, and in a deck shows while the deck is spread. It takes the toasts' `--ng-toast-bg`,
+`--ng-toast-color` and `--ng-toast-shadow`, or `--ng-toast-clear-all-bg`, `-color`, `-font`,
+`-padding` and `-radius` of its own.
 
 ### Stacked
 
@@ -232,7 +276,7 @@ theme.
   flies out, short of that and it snaps back. Its timer waits meanwhile.
 - An error is announced as an alert (`role="alert"`), interrupting; every other toast as a
   status (`role="status"`), when the screen reader has a moment.
-- With `prefers-reduced-motion` nothing slides or snaps; the fades stay.
+- With `prefers-reduced-motion` nothing slides or snaps, and every `hideAnimation` is a fade.
 
 ### Testing your app
 

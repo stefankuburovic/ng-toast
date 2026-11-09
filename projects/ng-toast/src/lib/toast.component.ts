@@ -18,8 +18,8 @@ import { ToastPackage } from './toast-package';
  * It runs its own timer once the service calls {@link start}: up for `timeOut`, stopped while the
  * pointer rests on it, and up for `extendedTimeOut` more once the pointer leaves. While the tab is
  * in the background the timer and the bar stand still (`pauseWhenHidden`). Closing adds
- * `toast-out` and leaves the element in place for `easeTime`, so the fade can play; only then
- * does it ask the service to remove it.
+ * `toast-out`, with the `hideAnimation` as `data-toast-hide`, and leaves the element in place for
+ * `easeTime`, so the animation can play; only then does it ask the service to remove it.
  *
  * Esc closes it while the focus is in it (on the × or an action), and a finger swipes it away
  * sideways (`swipeToDismiss`).
@@ -37,6 +37,7 @@ import { ToastPackage } from './toast-package';
   host: {
     '[class]': 'toastClasses()',
     '[class.toast-out]': 'closing()',
+    '[attr.data-toast-hide]': 'closing() ? (flung() ? "fade" : options().hideAnimation) : null',
     '[class.toast-paused]': 'paused()',
     '[style.--toast-ease-time]': 'options().easeTime + "ms"',
     '[style.translate]': 'swipe() ? swipe() + "px 0" : null',
@@ -53,8 +54,8 @@ import { ToastPackage } from './toast-package';
     '(document:visibilitychange)': 'visibilityChange()'
   },
   template: `
-    @if (options().closeButton) {
-      <button (click)="close()" type="button" class="toast-close-button" aria-label="Close">
+    @if (options().closeButton && options().closeButton !== 'text') {
+      <button (click)="close()" type="button" class="toast-close-button" [attr.aria-label]="options().closeLabel">
         <span aria-hidden="true">&times;</span>
       </button>
     }
@@ -69,7 +70,7 @@ import { ToastPackage } from './toast-package';
         <div [attr.role]="liveRole()" [class]="options().messageClass">{{ message() }}@if (duplicates()) { [{{ duplicates() + 1 }}]}</div>
       }
     }
-    @if (options().actions.length) {
+    @if (options().actions.length || options().closeButton === 'text') {
       <div class="toast-actions">
         @for (action of options().actions; track action) {
           <button
@@ -79,6 +80,9 @@ import { ToastPackage } from './toast-package';
             [class]="action.class ?? ''"
             [attr.aria-label]="action.ariaLabel"
           >{{ action.label }}</button>
+        }
+        @if (options().closeButton === 'text') {
+          <button (click)="close()" type="button" class="toast-action toast-close-action">{{ options().closeLabel }}</button>
         }
       </div>
     }
@@ -135,6 +139,11 @@ export class ToastComponent implements OnDestroy {
   protected readonly swipe = signal(0);
   /** A finger is dragging the toast: no transition, so it follows the finger. */
   protected readonly swiping = signal(false);
+  /**
+   * A finger swiped the toast away: it leaves with a plain fade where the finger let go, whatever
+   * `hideAnimation` says, as any other would pull it back across the screen.
+   */
+  protected readonly flung = signal(false);
 
   private readonly document = inject(DOCUMENT);
   /** The pending close: the timeout, the extended timeout or the end of the fade. */
@@ -278,6 +287,7 @@ export class ToastComponent implements OnDestroy {
     const width = (event.currentTarget as HTMLElement).offsetWidth;
     if (event.type === 'pointerup' && Math.abs(this.swipe()) > Math.min(80, width / 3)) {
       this.swipe.set(Math.sign(this.swipe()) * width);
+      this.flung.set(true);
       this.close();
     } else {
       this.swipe.set(0);

@@ -374,20 +374,197 @@ button.toast-close-button {
   }
 }
 
-/* fade, timed by the toast's easeTime (ToastComponent sets --toast-ease-time) */
+/* "Clear all" (clearAllButton): below a top container's toasts, above a bottom one's, at its side */
+.toast-clear-all {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 1001;
+  pointer-events: auto;
+  padding: var(--ng-toast-clear-all-padding, 4px 12px);
+  border: 0;
+  border-radius: var(--ng-toast-clear-all-radius, 999px);
+  background: var(--ng-toast-clear-all-bg, var(--ng-toast-bg, #030303));
+  color: var(--ng-toast-clear-all-color, var(--ng-toast-color, #FFFFFF));
+  box-shadow: var(--ng-toast-shadow, 0 0 12px #999999);
+  font: var(--ng-toast-clear-all-font, bold 12px / 1.5 sans-serif);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 150ms ease, visibility 150ms;
+}
+.toast-clear-all:hover,
+.toast-clear-all:focus-visible {
+  box-shadow: var(--ng-toast-shadow-hover, 0 0 12px #000000);
+}
+.toast-clear-all[hidden] {
+  display: none;
+}
+[class*='toast-bottom'] > .toast-clear-all {
+  top: auto;
+  bottom: 100%;
+  margin-bottom: var(--ng-toast-gap, 6px);
+}
+[class*='-left'] > .toast-clear-all {
+  right: auto;
+  left: 0;
+}
+[class*='-center'] > .toast-clear-all,
+[class*='-full-width'] > .toast-clear-all {
+  left: 0;
+  margin-inline: auto;
+  width: fit-content;
+}
+/* in a deck: shown while it is spread, right after the last card, so the pointer can reach it */
+.toast-stacked > .toast-clear-all {
+  top: calc(var(--toast-stack-height, 0px) + var(--toast-count, 1) * var(--ng-toast-gap, 6px));
+}
+.toast-stacked[class*='toast-bottom'] > .toast-clear-all {
+  top: auto;
+  bottom: calc(var(--toast-stack-height, 0px) + var(--toast-count, 1) * var(--ng-toast-gap, 6px));
+  margin-bottom: 0;
+}
+.toast-stacked:not(:hover):not(:focus-within) > .toast-clear-all {
+  opacity: 0;
+  visibility: hidden;
+}
+/* the gap between the deck and the button still counts as the deck */
+.toast-container.toast-stacked:has(> .toast-clear-all:not([hidden]))::after {
+  height: calc(var(--toast-stack-height, 0px) + var(--toast-count, 1) * var(--ng-toast-gap, 6px));
+}
+
+/*
+ * in and out, timed by the toast's easeTime (ToastComponent sets --toast-ease-time); the way out is
+ * its hideAnimation, which ToastComponent sets as data-toast-hide
+ */
 .toast-container .toast-in {
   animation: ng-toast-fade var(--toast-ease-time, 300ms) ease-in;
 }
-
 .toast-container .toast-out {
-  animation: ng-toast-fade var(--toast-ease-time, 300ms) ease-in reverse forwards;
+  animation: ng-toast-hide var(--toast-ease-time, 300ms) ease-in forwards;
+}
+.toast-out[data-toast-hide='fade-up'] {
+  --toast-out: 0 -24px;
+}
+.toast-out[data-toast-hide='fade-down'] {
+  --toast-out: 0 24px;
+}
+.toast-out[data-toast-hide='fade-left'] {
+  --toast-out: -24px 0;
+}
+.toast-out[data-toast-hide='fade-right'] {
+  --toast-out: 24px 0;
+}
+.toast-out[data-toast-hide='slide-up'] {
+  --toast-out: 0 -150%;
+}
+.toast-out[data-toast-hide='slide-down'] {
+  --toast-out: 0 150%;
+}
+.toast-out[data-toast-hide='slide-left'] {
+  --toast-out: -120% 0;
+}
+.toast-out[data-toast-hide='slide-right'] {
+  --toast-out: 120% 0;
+}
+.toast-out[data-toast-hide='zoom'] {
+  --toast-out-scale: 0.6;
+}
+.toast-container .toast-out:is([data-toast-hide^='fade-'], [data-toast-hide='zoom']) {
+  animation-name: ng-toast-out;
+}
+.toast-container .toast-out[data-toast-hide^='slide-'] {
+  animation-name: ng-toast-slide;
+}
+.toast-container .toast-out[data-toast-hide='flip'] {
+  animation-name: ng-toast-flip;
+}
+.toast-container .toast-out[data-toast-hide='crash'] {
+  animation-name: ng-toast-crash;
+  animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.4);
+}
+.toast-container .toast-out[data-toast-hide='destroy'] {
+  animation-name: ng-toast-destroy;
+  animation-timing-function: ease-out;
 }
 
 @keyframes ng-toast-fade {
   from {
     opacity: 0;
   }
+}
+/* a fade where it is; a swiped toast leaves with it from where the finger let go */
+@keyframes ng-toast-hide {
   to {
+    opacity: 0;
+  }
+}
+/* a fade with a drift or a shrink */
+@keyframes ng-toast-out {
+  to {
+    opacity: 0;
+    translate: var(--toast-out, 0 0);
+    scale: var(--toast-out-scale, 1);
+  }
+}
+/* off the screen whole, fading only at the end */
+@keyframes ng-toast-slide {
+  60% {
     opacity: 1;
+  }
+  to {
+    opacity: 0;
+    translate: var(--toast-out);
+  }
+}
+@keyframes ng-toast-flip {
+  to {
+    opacity: 0;
+    rotate: x 90deg;
+  }
+}
+/* a jolt, then down past the bottom of the screen, tumbling */
+@keyframes ng-toast-crash {
+  15% {
+    translate: 0 -8px;
+    rotate: -4deg;
+  }
+  to {
+    translate: 0 110vh;
+    rotate: 24deg;
+  }
+}
+/* a shake, a flare, then a burst into a blur */
+@keyframes ng-toast-destroy {
+  8% {
+    translate: -5px 0;
+  }
+  16% {
+    translate: 5px 1px;
+  }
+  24% {
+    translate: -4px -1px;
+  }
+  32% {
+    translate: 3px 0;
+    scale: 1;
+    filter: blur(0) brightness(1);
+  }
+  50% {
+    translate: 0 0;
+    scale: 1.06;
+    filter: blur(0) brightness(1.8);
+    opacity: 1;
+  }
+  to {
+    scale: 1.4;
+    filter: blur(14px) brightness(2.5);
+    opacity: 0;
+  }
+}
+
+/* reduced motion: whichever way out was asked for, a fade */
+@media (prefers-reduced-motion: reduce) {
+  .toast-container .toast-out[data-toast-hide] {
+    animation-name: ng-toast-hide;
   }
 }

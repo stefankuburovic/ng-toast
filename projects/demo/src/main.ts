@@ -11,6 +11,12 @@ bootstrapApplication(App, {
     provideZonelessChangeDetection(),
     // Shown on the page as well, so what a visitor sees can be traced to it. `stacked` is global,
     // so the layout switch on the page reloads it with ?layout=stacked.
-    provideToast({ maxOpened: 4, preventDuplicates: true, countDuplicates: true, stacked: STACKED })
+    provideToast({
+      maxOpened: 4,
+      preventDuplicates: true,
+      countDuplicates: true,
+      clearAllButton: true,
+      stacked: STACKED
+    })
   ]
 }).catch(error => console.error(error));
